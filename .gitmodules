@@ -1,0 +1,3 @@
+[submodule "libsoxr"]
+	path = libsoxr
+	url = https://git.code.sf.net/p/soxr/code
