@@ -1,6 +1,6 @@
 # distutils: language=C
 
-# Python wrapper for libsoxr
+# Cython wrapper for libsoxr
 # https://github.com/dofuuz/python-soxr
 
 cdef extern from 'soxr.h':
@@ -55,6 +55,15 @@ cdef extern from 'soxr.h':
     # zero.  End-of-input (i.e. no data is available nor shall be available)
     # may be indicated by seting `in' to NULL.
 
+    # Common stream resampler operations:
+    cdef soxr_error_t soxr_error(soxr_t)   # Query error status.
+    cdef size_t   * soxr_num_clips(soxr_t) # Query int. clip counter (for R/W).
+    cdef double     soxr_delay(soxr_t)  # Query current delay in output samples.
+    cdef const char * soxr_engine(soxr_t)  # Query resampling engine name.
+
+    cdef soxr_error_t soxr_clear(soxr_t) # Ready for fresh signal, same config.
+    cdef void         soxr_delete(soxr_t)  # Free resources.
+
     # `Short-cut', single call to resample a (probably short) signal held entirely
     # in memory.  See soxr_create and soxr_process above for parameter details.
     # Note that unlike soxr_create however, the default quality spec. for
@@ -79,9 +88,19 @@ cdef extern from 'soxr.h':
         # Use for split channels:
         SOXR_FLOAT32_S = SOXR_SPLIT  , SOXR_FLOAT64_S, SOXR_INT32_S, SOXR_INT16_S
 
-    ctypedef struct soxr_io_spec:                                     # Typically
-        soxr_datatype_t itype     # Input datatype.                SOXR_FLOAT32_I
-        soxr_datatype_t otype     # Output datatype.               SOXR_FLOAT32_I
-        double scale              # Linear gain to apply during resampling.  1
-        void * e                  # Reserved for internal use                0
-        unsigned long flags       # Per the following #defines.              0
+    # -------------------------- API type constructors -------------------------
+
+    cdef soxr_quality_spec_t soxr_quality_spec(
+        unsigned long recipe,       # Per the #defines immediately below.
+        unsigned long flags)        # As soxr_quality_spec_t.flags.
+
+    cdef enum soxr_quality_recipe_t:
+        SOXR_QQ
+        SOXR_LQ
+        SOXR_MQ
+        SOXR_HQ
+        SOXR_VHQ
+
+    cdef soxr_io_spec_t soxr_io_spec(
+        soxr_datatype_t itype,
+        soxr_datatype_t otype)

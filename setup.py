@@ -65,7 +65,7 @@ setup(
     tests_require=['pytest'],
     classifiers=[
         "Programming Language :: Python",
-        "License :: OSI Approved :: GNU Lesser General Public License v2 (LGPLv2)",
+        "OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
         "Operating System :: OS Independent",
     ]
 )
