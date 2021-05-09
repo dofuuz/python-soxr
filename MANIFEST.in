@@ -1,0 +1,5 @@
+include libsoxr/src/*.c
+include libsoxr/src/*.h
+include libsoxr/msvc/*.h
+include libsoxr/COPYING.LGPL
+include libsoxr/LICENCE
