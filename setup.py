@@ -51,7 +51,7 @@ extensions = [
 ]
 setup(
     name="soxr",
-    version="0.0.1",
+    version="0.0.2",
     author="dofuuz",
     description="Python Wrapper for libsoxr",
     long_description=long_description,
@@ -61,11 +61,14 @@ setup(
     package_data={'soxr':["*.pyx", "*.h"]},
     ext_package='soxr',
     ext_modules=extensions,
-    setup_requires=['setuptools>=18.0', 'cython', 'numpy', 'pytest-runner'],
+    setup_requires=['setuptools>=18.0', 'cython', 'oldest-supported-numpy'],
     tests_require=['pytest'],
     classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Programming Language :: C",
         "Programming Language :: Python",
-        "OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
+        "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
         "Operating System :: OS Independent",
-    ]
+    ],
+    license_files=['LICENSE.txt', 'lgpl-2.1.txt'],
 )

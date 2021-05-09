@@ -2,8 +2,6 @@
 # https://github.com/dofuuz/python-soxr
 
 import numpy as np
-
-cimport cython
 cimport numpy as np
 
 cimport csoxr
@@ -53,7 +51,7 @@ cdef class CySoxr:
         if dtype != self._dtype:
             raise ValueError('Dtype not match')
 
-        x = np.asarray(x, order='c')    # make array C-contiguous
+        x = np.ascontiguousarray(x)
         cdef np.ndarray out_buf = np.zeros([olen, channels], dtype=dtype, order='c')
         cdef size_t odone
 
@@ -109,7 +107,7 @@ cpdef np.ndarray cysoxr_oneshot(double in_rate, double out_rate, np.ndarray x):
 
     cdef csoxr.soxr_quality_spec_t quality = csoxr.soxr_quality_spec(csoxr.SOXR_HQ, 0)
 
-    x = np.asarray(x, order='c')    # make array C-contiguous
+    x = np.ascontiguousarray(x)    # make array C-contiguous
 
     cdef size_t odone
     cdef np.ndarray out_ndarray = np.zeros([olen, channels], dtype=dtype, order='c')
