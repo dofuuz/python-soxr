@@ -47,11 +47,11 @@ extensions = [
         src,
         include_dirs=['libsoxr/src', 'libsoxr/msvc'],
         language="c",
-        extra_compile_args=['-DSOXR_LIB'])
+        extra_compile_args=['-DSOXR_LIB', '-march=native'])
 ]
 setup(
     name="soxr",
-    version="0.0.2",
+    version="0.0.3",
     author="dofuuz",
     description="Python Wrapper for libsoxr",
     long_description=long_description,
@@ -61,7 +61,7 @@ setup(
     package_data={'soxr':["*.pyx", "*.h"]},
     ext_package='soxr',
     ext_modules=extensions,
-    setup_requires=['setuptools>=18.0', 'cython', 'oldest-supported-numpy'],
+    setup_requires=['numpy'],
     tests_require=['pytest'],
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -70,5 +70,5 @@ setup(
         "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
         "Operating System :: OS Independent",
     ],
-    license_files=['LICENSE.txt', 'lgpl-2.1.txt'],
+    license_files=['LICENSE.txt'],
 )
