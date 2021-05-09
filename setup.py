@@ -61,7 +61,8 @@ setup(
     package_data={'soxr':["*.pyx", "*.h"]},
     ext_package='soxr',
     ext_modules=extensions,
-    setup_requires=['numpy'],
+    python_requires='>=3.5'
+    install_requires=['numpy'],
     tests_require=['pytest'],
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -72,3 +73,4 @@ setup(
     ],
     license_files=['LICENSE.txt'],
 )
+
