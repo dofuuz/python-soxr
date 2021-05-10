@@ -18,17 +18,19 @@ cdef class CySoxr:
         self._out_rate = out_rate
         self._dtype = dtype
 
-        cdef csoxr.soxr_io_spec_t io_spec
+        cdef csoxr.soxr_datatype_t io_type
         if dtype == np.float32:
-            io_spec = csoxr.soxr_io_spec(csoxr.SOXR_FLOAT32_I, csoxr.SOXR_FLOAT32_I)
+            io_type = csoxr.SOXR_FLOAT32_I
         elif dtype == np.float64:
-            io_spec = csoxr.soxr_io_spec(csoxr.SOXR_FLOAT64_I, csoxr.SOXR_FLOAT64_I)
+            io_type = csoxr.SOXR_FLOAT64_I
         elif dtype == np.int32:
-            io_spec = csoxr.soxr_io_spec(csoxr.SOXR_INT32_I, csoxr.SOXR_INT32_I)
+            io_type = csoxr.SOXR_INT32_I
         elif dtype == np.int16:
-            io_spec = csoxr.soxr_io_spec(csoxr.SOXR_INT16_I, csoxr.SOXR_INT16_I)
+            io_type = csoxr.SOXR_INT16_I
         else:
             raise ValueError('Dtype not support')
+
+        cdef csoxr.soxr_io_spec_t io_spec = csoxr.soxr_io_spec(io_type, io_type)
 
         self._soxr = csoxr.soxr_create(in_rate, out_rate, num_channels, NULL, &io_spec, NULL, NULL)
         if self._soxr is NULL:
@@ -93,18 +95,19 @@ cpdef np.ndarray cysoxr_oneshot(double in_rate, double out_rate, np.ndarray x):
 
     dtype = x.dtype
 
-    cdef csoxr.soxr_io_spec_t io_spec
+    cdef csoxr.soxr_datatype_t io_type
     if dtype == np.float32:
-        io_spec = csoxr.soxr_io_spec(csoxr.SOXR_FLOAT32_I, csoxr.SOXR_FLOAT32_I)
+        io_type = csoxr.SOXR_FLOAT32_I
     elif dtype == np.float64:
-        io_spec = csoxr.soxr_io_spec(csoxr.SOXR_FLOAT64_I, csoxr.SOXR_FLOAT64_I)
+        io_type = csoxr.SOXR_FLOAT64_I
     elif dtype == np.int32:
-        io_spec = csoxr.soxr_io_spec(csoxr.SOXR_INT32_I, csoxr.SOXR_INT32_I)
+        io_type = csoxr.SOXR_INT32_I
     elif dtype == np.int16:
-        io_spec = csoxr.soxr_io_spec(csoxr.SOXR_INT16_I, csoxr.SOXR_INT16_I)
+        io_type = csoxr.SOXR_INT16_I
     else:
         raise ValueError('Dtype not support')
 
+    cdef csoxr.soxr_io_spec_t io_spec = csoxr.soxr_io_spec(io_type, io_type)
     cdef csoxr.soxr_quality_spec_t quality = csoxr.soxr_quality_spec(csoxr.SOXR_HQ, 0)
 
     x = np.ascontiguousarray(x)    # make array C-contiguous
