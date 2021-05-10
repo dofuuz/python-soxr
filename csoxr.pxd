@@ -37,7 +37,7 @@ cdef extern from 'soxr.h':
         const soxr_runtime_spec_t *) # To specify non-default runtime resources.
     # Default io_spec      is per soxr_io_spec(SOXR_FLOAT32_I, SOXR_FLOAT32_I)
     # Default quality_spec is per soxr_quality_spec(SOXR_HQ, 0)
-    # Default runtime_spec is per soxr_runtime_spec(1)                          */
+    # Default runtime_spec is per soxr_runtime_spec(1)
 
     # If not using an app-supplied input function, after creating a stream
     # resampler, repeatedly call:
@@ -78,7 +78,9 @@ cdef extern from 'soxr.h':
         const soxr_quality_spec_t *,
         const soxr_runtime_spec_t *)
 
-    cdef enum soxr_datatype_t:          # Datatypes supported for I/O to/from the resampler: */
+    # -------------------------- API type definitions --------------------------
+
+    ctypedef enum soxr_datatype_t:  # Datatypes supported for I/O to/from the resampler:
         # Internal; do not use:
         SOXR_FLOAT32, SOXR_FLOAT64, SOXR_INT32, SOXR_INT16, SOXR_SPLIT = 4,
 

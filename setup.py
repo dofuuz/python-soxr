@@ -64,7 +64,7 @@ extensions = [
 
 setup(
     name="soxr",
-    version="0.0.3",
+    version="0.0.4",
     author="dofuuz",
     description="High quality, one-dimensional sample-rate conversion library",
     keywords='samplerate, SRC',
