@@ -22,6 +22,11 @@ class ResampleStream():
         if type(x) != np.ndarray or x.dtype.type != self._type:
             x = np.asarray(x, dtype=self._type)
 
+        if x.ndim == 1:
+            x = np.expand_dims(x, axis=1)
+            y = self._cysoxr.process(x, end)
+            return np.squeeze(y, axis=1)
+
         return self._cysoxr.process(x, end)
 
 
@@ -31,5 +36,10 @@ def resample(x, in_rate: float, out_rate: float):
 
     if not x.dtype.type in (np.float32, np.float64, np.int16, np.int32):
         raise ValueError("dtype must be one of ['float32', 'float64', 'int16', 'int32'] and not {}".format(x.dtype.type))
+
+    if x.ndim == 1:
+        x = np.expand_dims(x, axis=1)
+        y = cysoxr_oneshot(in_rate, out_rate, x)
+        return np.squeeze(y, axis=1)
 
     return cysoxr_oneshot(in_rate, out_rate, x)
