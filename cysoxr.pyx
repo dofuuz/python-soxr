@@ -8,15 +8,15 @@ cimport csoxr
 
 
 # NumPy scalar type to soxr_io_spec_t
-cdef csoxr.soxr_io_spec_t to_io_spec(type dtype):
+cdef csoxr.soxr_io_spec_t to_io_spec(type ntype):
     cdef csoxr.soxr_datatype_t io_type
-    if dtype == np.float32:
+    if ntype == np.float32:
         io_type = csoxr.SOXR_FLOAT32_I
-    elif dtype == np.float64:
+    elif ntype == np.float64:
         io_type = csoxr.SOXR_FLOAT64_I
-    elif dtype == np.int32:
+    elif ntype == np.int32:
         io_type = csoxr.SOXR_INT32_I
-    elif dtype == np.int16:
+    elif ntype == np.int16:
         io_type = csoxr.SOXR_INT16_I
     else:
         raise ValueError('Data type not support')
@@ -28,14 +28,14 @@ cdef class CySoxr:
     cdef csoxr.soxr_t _soxr
     cdef double _in_rate
     cdef double _out_rate
-    cdef type _dtype
+    cdef type _ntype
 
-    def __cinit__(self, double in_rate, double out_rate, unsigned num_channels, type dtype):
+    def __cinit__(self, double in_rate, double out_rate, unsigned num_channels, type ntype):
         self._in_rate = in_rate
         self._out_rate = out_rate
-        self._dtype = dtype
+        self._ntype = ntype
 
-        cdef csoxr.soxr_io_spec_t io_spec = to_io_spec(dtype)
+        cdef csoxr.soxr_io_spec_t io_spec = to_io_spec(ntype)
 
         self._soxr = csoxr.soxr_create(in_rate, out_rate, num_channels, NULL, &io_spec, NULL, NULL)
         if self._soxr is NULL:
@@ -44,7 +44,7 @@ cdef class CySoxr:
     def __dealloc__(self):
         csoxr.soxr_delete(self._soxr)
 
-    cpdef np.ndarray process(self, np.ndarray x, bint eof=False):
+    cpdef np.ndarray process(self, np.ndarray x, bint last=False):
         if 2 < x.ndim:
             raise ValueError('Input must be 1-D or 2-D array')
 
@@ -54,45 +54,46 @@ cdef class CySoxr:
         if 2 == x.ndim:
             channels = x.shape[1]
 
-        cdef type dtype = x.dtype.type
-        if dtype != self._dtype:
+        cdef type ntype = x.dtype.type
+        if ntype != self._ntype:
             raise ValueError('Data type not match')
 
         x = np.ascontiguousarray(x)
-        cdef np.ndarray out_buf
+        cdef np.ndarray y
         if 1 == x.ndim:
-            out_buf = np.zeros([olen], dtype=dtype, order='c')
+            y = np.zeros([olen], dtype=ntype, order='c')
         else:
-            out_buf = np.zeros([olen, channels], dtype=dtype, order='c')
+            y = np.zeros([olen, channels], dtype=ntype, order='c')
 
         cdef size_t odone
         csoxr.soxr_process(
             self._soxr,
             x.data, ilen, NULL,
-            out_buf.data, olen, &odone)
+            y.data, olen, &odone)
 
-        out_buf = out_buf[:odone]
+        y = y[:odone]
 
-        cdef np.ndarray eof_buf
+        # flush if last input
+        cdef np.ndarray last_buf
         cdef int delay
-        if (eof):
+        if last:
             delay = int(csoxr.soxr_delay(self._soxr) + .5)
 
             if 1 == x.ndim:
-                eof_buf = np.zeros([delay], dtype=dtype, order='c')
+                last_buf = np.zeros([delay], dtype=ntype, order='c')
             else:
-                eof_buf = np.zeros([delay, channels], dtype=dtype, order='c')
+                last_buf = np.zeros([delay, channels], dtype=ntype, order='c')
 
             csoxr.soxr_process(
                 self._soxr,
                 NULL, 0, NULL,
-                eof_buf.data, delay, &odone)
+                last_buf.data, delay, &odone)
 
-            eof_buf = eof_buf[:odone]
+            last_buf = last_buf[:odone]
 
-            out_buf = np.concatenate([out_buf, eof_buf])
+            y = np.concatenate([y, last_buf])
 
-        return out_buf
+        return y
 
 
 cpdef np.ndarray cysoxr_oneshot(double in_rate, double out_rate, np.ndarray x):
@@ -105,10 +106,10 @@ cpdef np.ndarray cysoxr_oneshot(double in_rate, double out_rate, np.ndarray x):
     if 2 == x.ndim:
         channels = x.shape[1]
 
-    cdef type dtype = x.dtype.type
+    cdef type ntype = x.dtype.type
 
     # make soxr config
-    cdef csoxr.soxr_io_spec_t io_spec = to_io_spec(dtype)
+    cdef csoxr.soxr_io_spec_t io_spec = to_io_spec(ntype)
     cdef csoxr.soxr_quality_spec_t quality = csoxr.soxr_quality_spec(csoxr.SOXR_HQ, 0)
 
     x = np.ascontiguousarray(x)    # make array C-contiguous
@@ -116,9 +117,9 @@ cpdef np.ndarray cysoxr_oneshot(double in_rate, double out_rate, np.ndarray x):
     cdef size_t odone
     cdef np.ndarray y 
     if 1 == x.ndim:
-        y = np.zeros([olen], dtype=dtype, order='c')
+        y = np.zeros([olen], dtype=ntype, order='c')
     else:
-        y = np.zeros([olen, channels], dtype=dtype, order='c')
+        y = np.zeros([olen, channels], dtype=ntype, order='c')
 
     csoxr.soxr_oneshot(
         in_rate, out_rate, channels,

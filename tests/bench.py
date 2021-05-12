@@ -47,7 +47,7 @@ for idx in range(0, len(sig), CHUNK_SIZE):
     if len(sig) <= end:
         eof = True
         end = len(sig)
-    y_chunk = rs_stream.resample_chunk(sig[idx:end], end=eof)
+    y_chunk = rs_stream.resample_chunk(sig[idx:end], last=eof)
     y_list.append(y_chunk)
 
 y_stream = np.concatenate(y_list)
