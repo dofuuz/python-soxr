@@ -50,9 +50,7 @@ for idx in range(0, len(sig), CHUNK_SIZE):
     y_chunk = rs_stream.resample_chunk(sig[idx:end], end=eof)
     y_list.append(y_chunk)
 
-y_stream = np.vstack(y_list)
-# y_stream = np.hstack(y_list)
-# y_stream = np.empty([])
+y_stream = np.concatenate(y_list)
 
 print('soxr stream: {:f} (sec), {}'.format(
     time.perf_counter() - start_time,
