@@ -51,6 +51,8 @@ for idx in range(0, len(sig), CHUNK_SIZE):
     y_list.append(y_chunk)
 
 y_stream = np.vstack(y_list)
+# y_stream = np.hstack(y_list)
+# y_stream = np.empty([])
 
 print('soxr stream: {:f} (sec), {}'.format(
     time.perf_counter() - start_time,
@@ -59,7 +61,7 @@ print('soxr stream: {:f} (sec), {}'.format(
 
 # resampy kaiser_fast
 start_time = time.perf_counter()
-y_resampy = resampy.resample(sig, P, Q, filter='kaiser_fast')
+y_resampy = resampy.resample(sig.T, P, Q, filter='kaiser_fast')
 print('resampy kaiser_fast: {:f} (sec), {}'.format(
     time.perf_counter() - start_time,
     y_resampy.shape))

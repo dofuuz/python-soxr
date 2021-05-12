@@ -98,6 +98,53 @@ cdef class CySoxr:
             out_buf = np.vstack([out_buf, eof_buf])
 
         return out_buf
+    
+    @cython.boundscheck(False)  # Deactivate bounds checking
+    @cython.wraparound(False)   # Deactivate negative indexing.
+    cpdef datatype_t[::1] process_1d(self, datatype_t[::1] x, bint eof=False):
+        cdef size_t ilen = x.shape[0]
+        cdef size_t olen = np.ceil(ilen * self._out_rate / self._in_rate)
+
+        # Cython type to NumPy scalar type
+        cdef type dtype
+        if datatype_t is cython.float:
+            dtype = np.float32
+        elif datatype_t is cython.double:
+            dtype = np.float64
+        elif datatype_t is cython.int:
+            dtype = np.int32
+        elif datatype_t is cython.short:
+            dtype = np.int16
+
+        if dtype != self._dtype:
+            raise ValueError('Data type not match')
+
+        # x = np.ascontiguousarray(x)
+        cdef datatype_t[::1] out_buf = np.zeros([olen], dtype=dtype, order='c')
+        cdef size_t odone
+
+        csoxr.soxr_process(
+            self._soxr,
+            &x[0], ilen, NULL,
+            &out_buf[0], olen, &odone)
+
+        out_buf = out_buf[:odone]
+
+        cdef datatype_t[::1] eof_buf
+        cdef int delay
+        if (eof):
+            delay = int(csoxr.soxr_delay(self._soxr) + .5)
+            eof_buf = np.zeros([delay], dtype=dtype, order='c')
+            csoxr.soxr_process(
+                self._soxr,
+                NULL, 0, NULL,
+                &eof_buf[0], delay, &odone)
+
+            eof_buf = eof_buf[:odone]
+
+            out_buf = np.hstack([out_buf, eof_buf])
+
+        return out_buf
 
 
 cpdef datatype_t[:, ::1] cysoxr_oneshot(double in_rate, double out_rate, datatype_t[:, ::1] x):
