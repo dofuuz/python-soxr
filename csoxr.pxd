@@ -96,12 +96,11 @@ cdef extern from 'soxr.h':
         unsigned long recipe,       # Per the #defines immediately below.
         unsigned long flags)        # As soxr_quality_spec_t.flags.
 
-    cdef enum soxr_quality_recipe_t:
-        SOXR_QQ
-        SOXR_LQ
-        SOXR_MQ
-        SOXR_HQ
-        SOXR_VHQ
+    cdef unsigned long SOXR_QQ
+    cdef unsigned long SOXR_LQ
+    cdef unsigned long SOXR_MQ
+    cdef unsigned long SOXR_HQ
+    cdef unsigned long SOXR_VHQ
 
     cdef soxr_io_spec_t soxr_io_spec(
         soxr_datatype_t itype,
