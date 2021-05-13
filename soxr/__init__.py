@@ -2,7 +2,10 @@
 # https://github.com/dofuuz/python-soxr
 
 
-from .cysoxr import CySoxr, cysoxr_oneshot
+from .cysoxr import CySoxr
+from .cysoxr import cysoxr_divide_proc_1d, cysoxr_divide_proc_2d
+from .cysoxr import cysoxr_oneshot
+
 import numpy as np
 
 
@@ -26,6 +29,23 @@ class ResampleStream():
 
 
 def resample(x, in_rate: float, out_rate: float):
+    if type(x) != np.ndarray:
+        x = np.asarray(x, dtype=np.float32)
+
+    if not x.dtype.type in (np.float32, np.float64, np.int16, np.int32):
+        raise ValueError("Data type must be one of ['float32', 'float64', 'int16', 'int32'] and not {}".format(x.dtype.type))
+
+    x = np.ascontiguousarray(x)    # make array C-contiguous
+    
+    if x.ndim == 1:
+        return cysoxr_divide_proc_1d(in_rate, out_rate, x)
+    elif x.ndim == 2:
+        return cysoxr_divide_proc_2d(in_rate, out_rate, x)
+    else:
+        raise ValueError('Input must be 1-D or 2-D array')
+
+
+def _resample_oneshot(x, in_rate: float, out_rate: float):
     if type(x) != np.ndarray:
         x = np.asarray(x, dtype=np.float32)
 

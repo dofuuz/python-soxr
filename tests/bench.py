@@ -29,10 +29,18 @@ sig = np.sin(cphase, dtype=np.float32)
 
 # soxr oneshot
 start_time = time.perf_counter()
-y_oneshot = soxr.resample(sig, P, Q)
+y_oneshot = soxr._resample_oneshot(sig, P, Q)
 print('soxr oneshot: {:f} (sec), {}'.format(
     time.perf_counter() - start_time,
     y_oneshot.shape))
+
+
+# soxr resample
+start_time = time.perf_counter()
+y_resample = soxr.resample(sig, P, Q)
+print('soxr resample: {:f} (sec), {}'.format(
+    time.perf_counter() - start_time,
+    y_resample.shape))
 
 
 # soxr stream
