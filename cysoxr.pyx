@@ -155,6 +155,7 @@ cpdef datatype_t[::1] cysoxr_divide_proc_1d(double in_rate, double out_rate,
     cdef size_t odone
     cdef size_t out_pos = 0
     cdef size_t proc_len = chunk_len
+    cdef int idx
     for idx in range(0, ilen, chunk_len):
         proc_len = min(chunk_len, ilen-idx)
         csoxr.soxr_process(
@@ -213,6 +214,7 @@ cpdef datatype_t[:, ::1] cysoxr_divide_proc_2d(double in_rate, double out_rate,
     cdef size_t odone
     cdef size_t out_pos = 0
     cdef size_t proc_len = chunk_len
+    cdef int idx
     for idx in range(0, ilen, chunk_len):
         proc_len = min(chunk_len, ilen-idx)
         csoxr.soxr_process(
