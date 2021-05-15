@@ -49,13 +49,13 @@ src = [
     # 'libsoxr/src/util64s.c',
 
     # Cython wrapper
-    'csoxr.pxd',
-    'cysoxr.pyx'
+    'soxr/csoxr.pxd',
+    'soxr/cysoxr.pyx'
 ]
 
 extensions = [
     CySoxrExtension(
-        "cysoxr",
+        "soxr.cysoxr",
         src,
         include_dirs=['libsoxr/src', 'soxr'],
         language="c",

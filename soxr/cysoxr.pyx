@@ -8,14 +8,13 @@ import numpy as np
 cimport numpy as np
 
 cimport csoxr
-from csoxr cimport SOXR_QQ, SOXR_LQ, SOXR_MQ, SOXR_HQ, SOXR_VHQ
 
 
-QQ = SOXR_QQ
-LQ = SOXR_LQ
-MQ = SOXR_MQ
-HQ = SOXR_HQ
-VHQ = SOXR_VHQ
+QQ = csoxr.SOXR_QQ
+LQ = csoxr.SOXR_LQ
+MQ = csoxr.SOXR_MQ
+HQ = csoxr.SOXR_HQ
+VHQ = csoxr.SOXR_VHQ
 
 
 ctypedef fused datatype_t:
