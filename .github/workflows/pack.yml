@@ -31,6 +31,8 @@ jobs:
 
       - name: Build wheels
         uses: joerick/cibuildwheel@v1.11.0
+        env:
+          CIBW_ARCHS_LINUX: auto64
 
       - uses: actions/upload-artifact@v2
         with:
@@ -41,6 +43,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: true
 
       - uses: actions/setup-python@v2
         name: Install Python
