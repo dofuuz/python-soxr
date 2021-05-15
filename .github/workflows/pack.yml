@@ -32,7 +32,7 @@ jobs:
       - name: Build wheels
         uses: joerick/cibuildwheel@v1.11.0
         env:
-          CIBW_ARCHS_LINUX: auto64
+          CIBW_SKIP: "*-manylinux_i686 pp36-macosx_x86_64"
 
       - uses: actions/upload-artifact@v2
         with:
