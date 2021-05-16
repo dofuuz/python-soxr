@@ -33,7 +33,7 @@ jobs:
         uses: joerick/cibuildwheel@v1.11.0
         env:
           # Skip build errors
-          CIBW_SKIP: "*-manylinux_i686 pp*-macosx_x86_64"
+          CIBW_SKIP: "*-manylinux_i686 pp*-macosx_x86_64 pp*-win32"
 
       - uses: actions/upload-artifact@v2
         with:
