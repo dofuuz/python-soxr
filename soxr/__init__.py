@@ -3,8 +3,6 @@
 # https://github.com/dofuuz/python-soxr
 
 
-from pkg_resources import get_distribution
-
 import numpy as np
 
 from .cysoxr import CySoxr
@@ -12,8 +10,7 @@ from .cysoxr import cysoxr_divide_proc_1d, cysoxr_divide_proc_2d
 from .cysoxr import cysoxr_oneshot
 from .cysoxr import QQ, LQ, MQ, HQ, VHQ
 
-
-__version__ = get_distribution('soxr').version
+from .version import version as __version__
 
 
 class ResampleStream():

@@ -1,8 +1,12 @@
 [build-system]
 requires = [
-    "setuptools>=40.8.0",
+    "setuptools>=42",
     "wheel",
-    "Cython",
+    "Cython>=0.28.5",
+    "setuptools_scm[toml]>=3.4",
     "oldest-supported-numpy"
 ]
+build-backend = "setuptools.build_meta"
 
+[tool.setuptools_scm]
+write_to = "soxr/version.py"

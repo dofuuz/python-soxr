@@ -7,7 +7,7 @@ cimport cython
 import numpy as np
 cimport numpy as np
 
-cimport csoxr
+from . cimport csoxr
 
 
 QQ = csoxr.SOXR_QQ

@@ -2,10 +2,6 @@ from setuptools import find_packages
 from setuptools import setup, Extension
 
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
-
-
 class CySoxrExtension(Extension):
     def __init__(self, *args, **kwargs):
         self._include = []
@@ -49,7 +45,6 @@ src = [
     # 'libsoxr/src/util64s.c',
 
     # Cython wrapper
-    'soxr/csoxr.pxd',
     'soxr/cysoxr.pyx'
 ]
 
@@ -62,37 +57,10 @@ extensions = [
         extra_compile_args=['-DSOXR_LIB'])
 ]
 
-setup(
-    name="soxr",
-    version="0.1.2",
-    author="dofuuz",
-    description="High quality, one-dimensional sample-rate conversion library",
-    keywords='samplerate, SRC',
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://github.com/dofuuz/python-soxr",
-    packages=find_packages(),
-    ext_package='soxr',
-    ext_modules=extensions,
-    python_requires='>=3.5',
-    install_requires=['numpy'],
-    tests_require=['pytest'],
-    classifiers=[
-        "Development Status :: 3 - Alpha",
 
-        "Intended Audience :: Developers",
-        "Intended Audience :: Information Technology",
-        "Intended Audience :: Science/Research",
-        "Intended Audience :: Telecommunications Industry",
-        "Topic :: Multimedia :: Sound/Audio :: Analysis",
-        "Topic :: Multimedia :: Sound/Audio :: Conversion",
-        "Topic :: Scientific/Engineering",
+if __name__ == "__main__":
+    from Cython.Build import cythonize
 
-        "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
-
-        "Programming Language :: C",
-        "Programming Language :: Python",
-    ],
-    license_files=['LICENSE.txt'],
-)
-
+    setup(
+        ext_modules=cythonize(extensions, language_level='3'),
+    )
