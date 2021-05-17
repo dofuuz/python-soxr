@@ -23,16 +23,51 @@ y = soxr.resample(
     16000       # target samplerate
 )
 ```
-Output is 2D numpy.ndarray with shape (frames, channels).
+If input is 1D array, output is 1D numpy.ndarray with shape (frames).
+
+If input is 2D array, output is 2D numpy.ndarray with shape (frames, channels).
 
 
-## Credits
+## Streaming usage
+
+Use `ResampleStream` for real-time processing or very long signal.
+
+```python
+import soxr
+
+rs = soxr.ResampleStream(
+    44100,              # input samplerate
+    16000,              # target samplerate
+    1,                  # channel(s)
+    dtype='float32'     # optional data type (default = np.float32)
+)
+
+eof = False
+while not eof:
+    # Get chunk
+    ...
+
+    y_chunk = rs.resample_chunk(
+        x,              # 1D(mono) or 2D(frames, channels) array input
+        last=eof        # Set True at end of input
+    )
+```
+
+Output frame count may not be consistent. This is normal operation.  
+(ex. [0, 0, 0, 186, 186, 166, 186, 186, 168, ...])
+
+
+## OSS libraries used
 
 ### libsoxr (LGPLv2.1+)
-https://sourceforge.net/projects/soxr/  
-Python-SoXR is a Python wrapper of libsoxr
+The SoX Resampler library  
+https://sourceforge.net/projects/soxr/
+
+Python-SoXR is a Python wrapper of libsoxr.
 
 
 ### PFFFT (BSD-like)
+PFFFT: a pretty fast FFT.  
 https://bitbucket.org/jpommier/pffft/  
-libsoxr uses PFFFT as FFT
+
+libsoxr dependency.
