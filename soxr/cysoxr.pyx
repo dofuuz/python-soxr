@@ -119,9 +119,9 @@ cdef class CySoxr:
         return y
 
 
-cpdef datatype_t[::1] cysoxr_divide_proc_1d(double in_rate, double out_rate,
-                                            datatype_t[::1] x,
-                                            unsigned long quality):
+cpdef np.ndarray cysoxr_divide_proc_1d(double in_rate, double out_rate,
+                                       datatype_t[::1] x,
+                                       unsigned long quality):
     cdef size_t ilen = x.shape[0]
     cdef size_t olen = np.ceil(ilen * out_rate / in_rate)
     cdef size_t chunk_len = int(48000 * in_rate / out_rate)
@@ -147,7 +147,7 @@ cpdef datatype_t[::1] cysoxr_divide_proc_1d(double in_rate, double out_rate,
         raise MemoryError()
 
     # alloc
-    y = np.zeros([olen], dtype=ntype, order='c')
+    cdef np.ndarray y = np.zeros([olen], dtype=ntype, order='c')
     cdef datatype_t[::1] y_view = y
 
     # divide and process
@@ -177,9 +177,9 @@ cpdef datatype_t[::1] cysoxr_divide_proc_1d(double in_rate, double out_rate,
     return y[:out_pos]
 
 
-cpdef datatype_t[:, ::1] cysoxr_divide_proc_2d(double in_rate, double out_rate,
-                                               datatype_t[:, ::1] x,
-                                               unsigned long quality):
+cpdef np.ndarray cysoxr_divide_proc_2d(double in_rate, double out_rate,
+                                       datatype_t[:, ::1] x,
+                                       unsigned long quality):
     cdef size_t ilen = x.shape[0]
     cdef size_t olen = np.ceil(ilen * out_rate / in_rate)
     cdef size_t chunk_len = int(48000 * in_rate / out_rate)
@@ -206,7 +206,7 @@ cpdef datatype_t[:, ::1] cysoxr_divide_proc_2d(double in_rate, double out_rate,
         raise MemoryError()
 
     # alloc
-    y = np.zeros([olen, channels], dtype=ntype, order='c')
+    cdef np.ndarray y = np.zeros([olen, channels], dtype=ntype, order='c')
     cdef datatype_t[:, ::1] y_view = y
 
     # divide and process
