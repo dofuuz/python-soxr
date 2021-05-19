@@ -62,6 +62,11 @@ Output frame count may not be consistent. This is normal operation.
 (ex. [0, 0, 0, 186, 186, 166, 186, 186, 168, ...])
 
 
+## Benchmark
+
+https://colab.research.google.com/drive/1XgSOvWlRIau1FYwQG_yRSAhDK3KB8bEL?usp=sharing
+
+
 ## Credit and License
 
 Python-SoXR is LGPL v2.1+ licensed, following libsoxr's license.
