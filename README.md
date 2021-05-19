@@ -1,6 +1,10 @@
 # Python-SoXR
 
-High quality, one-dimensional sample-rate conversion library for Python
+[![PyPI](https://img.shields.io/pypi/v/soxr.svg)](https://pypi.org/project/soxr/)
+
+High quality, one-dimensional sample-rate conversion library for Python.
+
+Python-SoXR is a Python wrapper of [libsoxr](https://sourceforge.net/projects/soxr/).
 
 
 ## Installation
@@ -23,9 +27,10 @@ y = soxr.resample(
     16000       # target samplerate
 )
 ```
-If input is 1D array, output is 1D numpy.ndarray with shape (frames).
+If input is not numpy.ndarray, it will be converted to numpy.ndarray(dtype=np.float32).  
+dtype should be one of float32, float64, int16, int32.
 
-If input is 2D array, output is 2D numpy.ndarray with shape (frames, channels).
+Output is numpy.ndarray with same ndim and dtype with input.
 
 
 ## Streaming usage
@@ -39,7 +44,7 @@ rs = soxr.ResampleStream(
     44100,              # input samplerate
     16000,              # target samplerate
     1,                  # channel(s)
-    dtype='float32'     # optional data type (default = np.float32)
+    dtype='float32'     # data type (default = np.float32)
 )
 
 eof = False
@@ -57,16 +62,19 @@ Output frame count may not be consistent. This is normal operation.
 (ex. [0, 0, 0, 186, 186, 166, 186, 186, 168, ...])
 
 
-## OSS libraries used
+## Credit and License
 
-### libsoxr (LGPLv2.1+)
+Python-SoXR is LGPL v2.1+ licensed, following libsoxr's license.
+
+### OSS libraries used
+
+#### libsoxr (LGPLv2.1+)
 The SoX Resampler library  
 https://sourceforge.net/projects/soxr/
 
 Python-SoXR is a Python wrapper of libsoxr.
 
-
-### PFFFT (BSD-like)
+#### PFFFT (BSD-like)
 PFFFT: a pretty fast FFT.  
 https://bitbucket.org/jpommier/pffft/  
 

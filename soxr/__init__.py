@@ -13,6 +13,9 @@ from .cysoxr import QQ, LQ, MQ, HQ, VHQ
 from .version import version as __version__
 
 
+_DTYPE_ERR_STR = "Data type must be one of ['float32', 'float64', 'int16', 'int32'] and not {}"
+
+
 class ResampleStream():
     def __init__(self,
                  in_rate: float, out_rate: float, num_channels: int,
@@ -21,7 +24,7 @@ class ResampleStream():
         if type(dtype) != type:
             dtype = np.dtype(dtype).type
         if not dtype in (np.float32, np.float64, np.int16, np.int32):
-            raise ValueError("Data type must be one of ['float32', 'float64', 'int16', 'int32'] and not {}".format(dtype))
+            raise ValueError(_DTYPE_ERR_STR.format(dtype))
 
         self._type = dtype
 
@@ -35,11 +38,38 @@ class ResampleStream():
 
 
 def resample(x, in_rate: float, out_rate: float, quality=HQ):
+    """ Resample signal
+
+    Parameters
+    ----------
+    x : array_like
+        Input array. Input can be 1D(mono) or 2D(frames, channels).
+        If input is not np.ndarray, it will be converted to np.ndarray(dtype=np.float32)
+        Its dtype should be one of float32, float64, int16, int32.
+    in_rate : float
+        Input sample-rate.
+    out_rate : float
+        Output sample-rate.
+    quality : TYPE, optional
+        Quality setting.
+        One of `QQ`, `LQ`, `MQ`, `HQ`, `VHQ`. The default is HQ.
+
+    Raises
+    ------
+    ValueError
+        Input has invalid ndim or dtype.
+
+    Returns
+    -------
+    np.ndarray
+        Resampled data.
+        Output is np.ndarray with same ndim and dtype with input.
+    """
     if type(x) != np.ndarray:
         x = np.asarray(x, dtype=np.float32)
 
     if not x.dtype.type in (np.float32, np.float64, np.int16, np.int32):
-        raise ValueError("Data type must be one of ['float32', 'float64', 'int16', 'int32'] and not {}".format(x.dtype.type))
+        raise ValueError(_DTYPE_ERR_STR.format(x.dtype.type))
 
     x = np.ascontiguousarray(x)    # make array C-contiguous
 
@@ -52,10 +82,15 @@ def resample(x, in_rate: float, out_rate: float, quality=HQ):
 
 
 def _resample_oneshot(x, in_rate: float, out_rate: float, quality=HQ):
+    '''
+    Resample using libsoxr's `soxr_oneshot()`. Use `resample()` for general use.
+    `soxr_oneshot()` becomes slow with long input.
+    This function exists for benchmark purpose.
+    '''
     if type(x) != np.ndarray:
         x = np.asarray(x, dtype=np.float32)
 
     if not x.dtype.type in (np.float32, np.float64, np.int16, np.int32):
-        raise ValueError("Data type must be one of ['float32', 'float64', 'int16', 'int32'] and not {}".format(x.dtype.type))
+        raise ValueError(_DTYPE_ERR_STR.format(x.dtype.type))
 
     return cysoxr_oneshot(in_rate, out_rate, x, quality)
