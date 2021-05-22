@@ -166,4 +166,4 @@ def _resample_oneshot(x, in_rate: float, out_rate: float, quality=HQ):
     `soxr_oneshot()` becomes slow with long input.
     This function exists for test purpose.
     '''
-    return cysoxr_oneshot(in_rate, out_rate, x, q=_quality_to_enum(quality))
+    return cysoxr_oneshot(in_rate, out_rate, x, _quality_to_enum(quality))
