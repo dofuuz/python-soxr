@@ -46,6 +46,7 @@ cdef class CySoxr:
     cdef double _in_rate
     cdef double _out_rate
     cdef type _ntype
+    cdef unsigned _channels
 
     def __cinit__(self,
                   double in_rate, double out_rate, unsigned num_channels,
@@ -53,16 +54,18 @@ cdef class CySoxr:
         self._in_rate = in_rate
         self._out_rate = out_rate
         self._ntype = ntype
+        self._channels = num_channels
 
+        cdef csoxr.soxr_error_t err = NULL
         cdef csoxr.soxr_io_spec_t io_spec = to_io_spec(ntype)
         cdef csoxr.soxr_quality_spec_t quality_spec = csoxr.soxr_quality_spec(quality, 0)
 
         self._soxr = csoxr.soxr_create(
             in_rate, out_rate, num_channels,
-            NULL, &io_spec, &quality_spec, NULL)
+            &err, &io_spec, &quality_spec, NULL)
 
-        if self._soxr is NULL:
-            raise MemoryError()
+        if err is not NULL:
+            raise RuntimeError(err)
 
     def __dealloc__(self):
         csoxr.soxr_delete(self._soxr)
@@ -77,9 +80,12 @@ cdef class CySoxr:
         if 2 == x.ndim:
             channels = x.shape[1]
 
+        if channels != self._channels:
+            raise ValueError('Channel num mismatch')
+
         cdef type ntype = x.dtype.type
         if ntype != self._ntype:
-            raise ValueError('Data type not match')
+            raise ValueError('Data type mismatch')
 
         x = np.ascontiguousarray(x)
         cdef np.ndarray y
@@ -137,14 +143,16 @@ cpdef np.ndarray cysoxr_divide_proc_1d(double in_rate, double out_rate,
         ntype = np.int16
 
     # init soxr
+    cdef csoxr.soxr_error_t err = NULL
     cdef csoxr.soxr_io_spec_t io_spec = to_io_spec(ntype)
     cdef csoxr.soxr_quality_spec_t quality_spec = csoxr.soxr_quality_spec(quality, 0)
 
     cdef csoxr.soxr_t soxr = csoxr.soxr_create(
         in_rate, out_rate, 1,
-        NULL, &io_spec, &quality_spec, NULL)
-    if soxr is NULL:
-        raise MemoryError()
+        &err, &io_spec, &quality_spec, NULL)
+
+    if err is not NULL:
+        raise RuntimeError(err)
 
     # alloc
     cdef np.ndarray y = np.zeros([olen], dtype=ntype, order='c')
@@ -196,14 +204,16 @@ cpdef np.ndarray cysoxr_divide_proc_2d(double in_rate, double out_rate,
         ntype = np.int16
 
     # init soxr
+    cdef csoxr.soxr_error_t err = NULL
     cdef csoxr.soxr_io_spec_t io_spec = to_io_spec(ntype)
     cdef csoxr.soxr_quality_spec_t quality_spec = csoxr.soxr_quality_spec(quality, 0)
 
     cdef csoxr.soxr_t soxr = csoxr.soxr_create(
         in_rate, out_rate, channels,
-        NULL, &io_spec, &quality_spec, NULL)
-    if soxr is NULL:
-        raise MemoryError()
+        &err, &io_spec, &quality_spec, NULL)
+
+    if err is not NULL:
+        raise RuntimeError(err)
 
     # alloc
     cdef np.ndarray y = np.zeros([olen, channels], dtype=ntype, order='c')
@@ -251,6 +261,7 @@ cpdef np.ndarray cysoxr_oneshot(double in_rate, double out_rate,
     cdef type ntype = x.dtype.type
 
     # make soxr config
+    cdef csoxr.soxr_error_t err = NULL
     cdef csoxr.soxr_io_spec_t io_spec = to_io_spec(ntype)
     cdef csoxr.soxr_quality_spec_t quality_spec = csoxr.soxr_quality_spec(quality, 0)
 
@@ -263,10 +274,13 @@ cpdef np.ndarray cysoxr_oneshot(double in_rate, double out_rate,
     else:
         y = np.zeros([olen, channels], dtype=ntype, order='c')
 
-    csoxr.soxr_oneshot(
+    err = csoxr.soxr_oneshot(
         in_rate, out_rate, channels,
         x.data, ilen, NULL,
         y.data, olen, &odone,
         &io_spec, &quality_spec, NULL)
+
+    if err is not NULL:
+        raise RuntimeError(err)
 
     return y[:odone]

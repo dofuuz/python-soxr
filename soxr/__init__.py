@@ -14,6 +14,11 @@ from .cysoxr import QQ, LQ, MQ, HQ, VHQ
 from .version import version as __version__
 
 
+# libsoxr locates memory per each channel.
+# Too much channels will cause memory error.
+_CH_LIMIT = 65536
+
+_CH_EXEED_ERR_STR = 'Channel num({}) out of limit. Should be in [1, %d]' % _CH_LIMIT
 _DTYPE_ERR_STR = "Data type must be one of ['float32', 'float64', 'int16', 'int32'] and not {}"
 _QUALITY_ERR_STR = "Quality must be one of [QQ, LQ, MQ, HQ, VHQ]"
 
@@ -64,6 +69,9 @@ class ResampleStream():
             Quality setting.
             One of `QQ`, `LQ`, `MQ`, `HQ`, `VHQ`. The default is HQ.
         '''
+        if num_channels < 1 or _CH_LIMIT < num_channels:
+            raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
+
         # internally uses NumPy sclar types, not dtype
         if type(dtype) != type:
             dtype = np.dtype(dtype).type
@@ -142,6 +150,10 @@ def resample(x, in_rate: float, out_rate: float, quality=HQ):
     if x.ndim == 1:
         return cysoxr_divide_proc_1d(in_rate, out_rate, x, q)
     elif x.ndim == 2:
+        num_channels = x.shape[1]
+        if num_channels < 1 or _CH_LIMIT < num_channels:
+            raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
+
         return cysoxr_divide_proc_2d(in_rate, out_rate, x, q)
     else:
         raise ValueError('Input must be 1-D or 2-D array')
@@ -151,10 +163,15 @@ def _resample_oneshot(x, in_rate: float, out_rate: float, quality=HQ):
     '''
     Resample using libsoxr's `soxr_oneshot()`. Use `resample()` for general use.
     `soxr_oneshot()` becomes slow with long input.
-    This function exists for benchmark purpose.
+    This function exists for test purpose.
     '''
     if type(x) != np.ndarray:
         x = np.asarray(x, dtype=np.float32)
+
+    if x.ndim == 2:
+        num_channels = x.shape[1]
+        if num_channels < 1 or _CH_LIMIT < num_channels:
+            raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
 
     if not x.dtype.type in (np.float32, np.float64, np.int16, np.int32):
         raise ValueError(_DTYPE_ERR_STR.format(x.dtype.type))
