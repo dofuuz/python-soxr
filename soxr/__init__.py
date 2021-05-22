@@ -69,6 +69,9 @@ class ResampleStream():
             Quality setting.
             One of `QQ`, `LQ`, `MQ`, `HQ`, `VHQ`. The default is HQ.
         '''
+        if in_rate <= 0 or out_rate <= 0:
+            raise ValueError('Sample rate should be over 0')
+
         if num_channels < 1 or _CH_LIMIT < num_channels:
             raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
 
@@ -126,17 +129,15 @@ def resample(x, in_rate: float, out_rate: float, quality=HQ):
         Quality setting.
         One of `QQ`, `LQ`, `MQ`, `HQ`, `VHQ`. The default is HQ.
 
-    Raises
-    ------
-    ValueError
-        Input has invalid ndim or dtype.
-
     Returns
     -------
     np.ndarray
         Resampled data.
         Output is np.ndarray with same ndim and dtype with input.
     """
+    if in_rate <= 0 or out_rate <= 0:
+        raise ValueError('Sample rate should be over 0')
+
     if type(x) != np.ndarray:
         x = np.asarray(x, dtype=np.float32)
 
@@ -165,17 +166,4 @@ def _resample_oneshot(x, in_rate: float, out_rate: float, quality=HQ):
     `soxr_oneshot()` becomes slow with long input.
     This function exists for test purpose.
     '''
-    if type(x) != np.ndarray:
-        x = np.asarray(x, dtype=np.float32)
-
-    if x.ndim == 2:
-        num_channels = x.shape[1]
-        if num_channels < 1 or _CH_LIMIT < num_channels:
-            raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
-
-    if not x.dtype.type in (np.float32, np.float64, np.int16, np.int32):
-        raise ValueError(_DTYPE_ERR_STR.format(x.dtype.type))
-
-    q = _quality_to_enum(quality)
-
-    return cysoxr_oneshot(in_rate, out_rate, x, q)
+    return cysoxr_oneshot(in_rate, out_rate, x, q=_quality_to_enum(quality))
