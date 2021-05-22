@@ -64,7 +64,28 @@ Output frame count may not be consistent. This is normal operation.
 
 ## Benchmark
 
+Sweep, impulse, speed compairsion with other Python resamplers.
+
 https://colab.research.google.com/drive/1XgSOvWlRIau1FYwQG_yRSAhDK3KB8bEL?usp=sharing
+
+
+### Speed comparison summary
+
+Downsampling 10 sec of 48000 Hz to 44100 Hz.  
+Ran on Google Colab.
+
+Library                  | Time on CPU (ms)
+------------------------ | ----------------
+soxr (HQ)                | 7.2
+scipy.signal.resample    | 13.4
+soxr (VHQ)               | 15.8
+torchaudio               | 19.2
+lilfilter                | 21.4
+julius                   | 23.1
+resampy (kaiser_fast)    | 62.6
+samplerate (sinc_medium) | 92.5
+resampy (kaiser_best)    | 256
+samplerate (sinc_best)   | 397
 
 
 ## Credit and License
