@@ -1,10 +1,14 @@
 # Python-SoXR
 
-[![PyPI](https://img.shields.io/pypi/v/soxr.svg)](https://pypi.org/project/soxr/)
+[![GitHub](https://img.shields.io/badge/GitHub-python--soxr-181717?logo=github)](https://github.com/dofuuz/python-soxr) [![PyPI](https://img.shields.io/pypi/v/soxr.svg?logo=pypi)](https://pypi.org/project/soxr/) [![Read the Docs](https://img.shields.io/readthedocs/python-soxr?logo=read-the-docs)](https://python-soxr.readthedocs.io)
 
 High quality, one-dimensional sample-rate conversion library for Python.
 
 Python-SoXR is a Python wrapper of [libsoxr](https://sourceforge.net/projects/soxr/).
+
+- Homepage: https://github.com/dofuuz/python-soxr
+- Documentation: https://python-soxr.readthedocs.io/
+- PyPI: https://pypi.org/project/soxr/
 
 
 ## Installation

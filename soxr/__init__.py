@@ -48,7 +48,7 @@ def _quality_to_enum(q):
 class ResampleStream():
     def __init__(self,
                  in_rate: float, out_rate: float, num_channels: int,
-                 dtype=np.float32, quality=HQ):
+                 dtype='float32', quality='HQ'):
         ''' Streaming resampler
 
         Use `ResampleStream` for real-time processing or very long signal.
@@ -112,7 +112,7 @@ class ResampleStream():
         return self._cysoxr.process(x, last)
 
 
-def resample(x, in_rate: float, out_rate: float, quality=HQ):
+def resample(x, in_rate: float, out_rate: float, quality='HQ'):
     """ Resample signal
 
     Parameters
@@ -160,7 +160,7 @@ def resample(x, in_rate: float, out_rate: float, quality=HQ):
         raise ValueError('Input must be 1-D or 2-D array')
 
 
-def _resample_oneshot(x, in_rate: float, out_rate: float, quality=HQ):
+def _resample_oneshot(x, in_rate: float, out_rate: float, quality='HQ'):
     '''
     Resample using libsoxr's `soxr_oneshot()`. Use `resample()` for general use.
     `soxr_oneshot()` becomes slow with long input.
