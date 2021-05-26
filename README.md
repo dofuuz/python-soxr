@@ -7,7 +7,7 @@ High quality, one-dimensional sample-rate conversion library for Python.
 Python-SoXR is a Python wrapper of [libsoxr](https://sourceforge.net/projects/soxr/).
 
 - Homepage: https://github.com/dofuuz/python-soxr
-- Documentation: https://python-soxr.readthedocs.io/
+- Documentation: https://python-soxr.readthedocs.io
 - PyPI: https://pypi.org/project/soxr/
 
 
@@ -31,10 +31,10 @@ y = soxr.resample(
     16000       # target samplerate
 )
 ```
-If input is not numpy.ndarray, it will be converted to numpy.ndarray(dtype=np.float32).  
+If input is not `numpy.ndarray`, it will be converted to `numpy.ndarray(dtype='float32')`.  
 dtype should be one of float32, float64, int16, int32.
 
-Output is numpy.ndarray with same ndim and dtype with input.
+Output is `numpy.ndarray` with same dimension and data type of input.
 
 
 ## Streaming usage
@@ -48,7 +48,7 @@ rs = soxr.ResampleStream(
     44100,              # input samplerate
     16000,              # target samplerate
     1,                  # channel(s)
-    dtype='float32'     # data type (default = np.float32)
+    dtype='float32'     # data type (default = 'float32')
 )
 
 eof = False

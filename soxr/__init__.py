@@ -46,10 +46,7 @@ def _quality_to_enum(q):
 
 
 class ResampleStream():
-    def __init__(self,
-                 in_rate: float, out_rate: float, num_channels: int,
-                 dtype='float32', quality='HQ'):
-        ''' Streaming resampler
+    ''' Streaming resampler
 
         Use `ResampleStream` for real-time processing or very long signal.
 
@@ -64,11 +61,14 @@ class ResampleStream():
         dtype : type or str, optional
             Internal data type processed with.
             Should be one of float32, float64, int16, int32.
-            The default is np.float32.
         quality : int or str, optional
             Quality setting.
-            One of `QQ`, `LQ`, `MQ`, `HQ`, `VHQ`. The default is HQ.
-        '''
+            One of `QQ`, `LQ`, `MQ`, `HQ`, `VHQ`.
+    '''
+
+    def __init__(self,
+                 in_rate: float, out_rate: float, num_channels: int,
+                 dtype='float32', quality='HQ'):
         if in_rate <= 0 or out_rate <= 0:
             raise ValueError('Sample rate should be over 0')
 
@@ -93,8 +93,8 @@ class ResampleStream():
         ----------
         x : array_like
             Input array. Input can be 1D(mono) or 2D(frames, channels).
-            If input is not np.ndarray or not dtype in constructor,
-            it will be converted to np.ndarray with dtype setting.
+            If input is not `np.ndarray` or not dtype in constructor,
+            it will be converted to `np.ndarray` with dtype setting.
 
         last : bool, optional
             Set True at end of input sequence.
@@ -119,7 +119,7 @@ def resample(x, in_rate: float, out_rate: float, quality='HQ'):
     ----------
     x : array_like
         Input array. Input can be 1D(mono) or 2D(frames, channels).
-        If input is not np.ndarray, it will be converted to np.ndarray(dtype=np.float32)
+        If input is not `np.ndarray`, it will be converted to `np.ndarray(dtype='float32')`.
         Its dtype should be one of float32, float64, int16, int32.
     in_rate : float
         Input sample-rate.
@@ -127,13 +127,13 @@ def resample(x, in_rate: float, out_rate: float, quality='HQ'):
         Output sample-rate.
     quality : int or str, optional
         Quality setting.
-        One of `QQ`, `LQ`, `MQ`, `HQ`, `VHQ`. The default is HQ.
+        One of `QQ`, `LQ`, `MQ`, `HQ`, `VHQ`.
 
     Returns
     -------
     np.ndarray
         Resampled data.
-        Output is np.ndarray with same ndim and dtype with input.
+        Output is `np.ndarray` with same ndim and dtype with input.
     """
     if in_rate <= 0 or out_rate <= 0:
         raise ValueError('Sample rate should be over 0')
