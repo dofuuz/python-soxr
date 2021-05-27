@@ -15,16 +15,22 @@ jobs:
         #   - os: windows-latest
         #     python-version: 3.9
     runs-on: ${{ matrix.os }}
+
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+
     - name: Install library
       run: |
         python -m pip install --upgrade pip
         python -m pip install .[test]
+
     - name: Test with pytest
       run: |
         cd tests
