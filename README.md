@@ -92,6 +92,14 @@ resampy (kaiser_best)    | 256
 samplerate (sinc_best)   | 397
 
 
+## Technical detail
+
+For technical details behind resampler, see libsoxr docs.
+- https://sourceforge.net/p/soxr/wiki/Home/
+- http://sox.sourceforge.net/SoX/Resampling
+- https://sourceforge.net/p/soxr/code/ci/master/tree/src/soxr.h
+
+
 ## Credit and License
 
 Python-SoXR is LGPL v2.1+ licensed, following libsoxr's license.
