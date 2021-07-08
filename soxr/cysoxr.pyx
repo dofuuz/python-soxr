@@ -126,7 +126,7 @@ cdef class CySoxr:
 
 
 cpdef np.ndarray cysoxr_divide_proc_1d(double in_rate, double out_rate,
-                                       datatype_t[::1] x,
+                                       const datatype_t[::1] x,
                                        unsigned long quality):
     cdef size_t ilen = x.shape[0]
     cdef size_t olen = np.ceil(ilen * out_rate / in_rate)
@@ -186,7 +186,7 @@ cpdef np.ndarray cysoxr_divide_proc_1d(double in_rate, double out_rate,
 
 
 cpdef np.ndarray cysoxr_divide_proc_2d(double in_rate, double out_rate,
-                                       datatype_t[:, ::1] x,
+                                       const datatype_t[:, ::1] x,
                                        unsigned long quality):
     cdef size_t ilen = x.shape[0]
     cdef size_t olen = np.ceil(ilen * out_rate / in_rate)
