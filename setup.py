@@ -1,6 +1,8 @@
 from setuptools import find_packages
 from setuptools import setup, Extension
 
+import distutils.util
+
 
 class CySoxrExtension(Extension):
     def __init__(self, *args, **kwargs):
@@ -48,13 +50,21 @@ src = [
     'soxr/cysoxr.pyx'
 ]
 
+compile_args = ['-DSOXR_LIB']
+platform = distutils.util.get_platform()
+
+if '-arm' in platform or '-aarch' in platform:
+    compile_args.append('-mfpu=neon')
+elif '-i686' in platform:
+    compile_args.append('-msse')
+
 extensions = [
     CySoxrExtension(
         "soxr.cysoxr",
         src,
         include_dirs=['libsoxr/src', 'soxr'],
         language="c",
-        extra_compile_args=['-DSOXR_LIB'])
+        extra_compile_args=compile_args)
 ]
 
 
