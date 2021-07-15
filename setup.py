@@ -53,7 +53,7 @@ src = [
 compile_args = ['-DSOXR_LIB']
 platform = distutils.util.get_platform()
 
-if '-arm' in platform or '-aarch' in platform:
+if '-arm' in platform:
     compile_args.append('-mfpu=neon')
 elif '-i686' in platform:
     compile_args.append('-msse')
