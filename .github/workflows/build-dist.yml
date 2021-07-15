@@ -17,23 +17,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, windows-2016, macos-10.15]
+        os: [ubuntu-20.04, windows-2019, macos-10.15]
 
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: true
 
-      - uses: actions/setup-python@v2
-        name: Install Python
-        with:
-          python-version: '3.8'
-
       - name: Build wheels
-        uses: joerick/cibuildwheel@v1.11.0
-        env:
-          # Skip build errors
-          CIBW_SKIP: "pp*-macosx_x86_64 pp*-win32"
+        uses: pypa/cibuildwheel@v1.12.0
 
       - uses: actions/upload-artifact@v2
         with:
