@@ -26,6 +26,9 @@ jobs:
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v1.12.0
+        env:
+          # Skip build errors
+          CIBW_SKIP: "pp*-macosx_x86_64"
 
       - uses: actions/upload-artifact@v2
         with:
