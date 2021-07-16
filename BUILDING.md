@@ -6,7 +6,7 @@
 git clone --recurse-submodules https://github.com/dofuuz/python-soxr.git
 
 # Upgrade PIP
-python -m pip --upgrade pip
+python -m pip install --upgrade pip
 ```
 
 ## Build

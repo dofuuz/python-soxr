@@ -66,6 +66,13 @@ Output frame count may not be consistent. This is normal operation.
 (ex. [0, 0, 0, 186, 186, 166, 186, 186, 168, ...])
 
 
+## Requirement
+
+x86 and ARM processors are supported.
+
+Neon extension is required for ARM CPUs. Without Neon, it may crash or return inaccurate result.
+
+
 ## Benchmark
 
 Sweep, impulse, speed compairsion with other Python resamplers.
