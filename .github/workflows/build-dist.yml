@@ -1,7 +1,7 @@
 name: Build and upload to PyPI
 
 # Build on every branch push, tag push, and pull request change:
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 # Alternatively, to publish when a (published) GitHub Release is created, use the following:
 # on:
 #   push:
@@ -17,11 +17,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, windows-2016, macos-10.15]
+        os: [ubuntu-18.04, windows-latest, macos-latest]
+        cibw_archs: ["auto"]
+        include:
+          - os: ubuntu-18.04
+            cibw_archs: "aarch64"
 
     steps:
+      - name: Set up QEMU
+        if: matrix.cibw_archs == 'aarch64'
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: arm64
+
       - uses: actions/checkout@v2
         with:
+          fetch-depth: 0
           submodules: true
 
       - uses: actions/setup-python@v2
@@ -29,16 +40,38 @@ jobs:
         with:
           python-version: '3.8'
 
-      - name: Build wheels
-        uses: joerick/cibuildwheel@v1.11.0
-        env:
-          # Skip build errors
-          CIBW_SKIP: "pp*-macosx_x86_64 pp*-win32"
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install cibuildwheel==2.1.1
 
+      - name: Build wheels for CPython 3.9
+        run: |
+          python -m cibuildwheel --output-dir dist
+        env:
+          CIBW_BUILD: "cp39-*"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux1
+          CIBW_MANYLINUX_I686_IMAGE: manylinux1
+          CIBW_BEFORE_BUILD: pip install Cython
+          MPL_DISABLE_FH4: "yes"
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+
+      - name: Build wheels for CPython
+        run: |
+          python -m cibuildwheel --output-dir dist
+        env:
+          CIBW_BUILD: "cp37-* cp38-*"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux1
+          CIBW_MANYLINUX_I686_IMAGE: manylinux1
+          CIBW_BEFORE_BUILD: pip install Cython
+          MPL_DISABLE_FH4: "yes"
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+          
       - uses: actions/upload-artifact@v2
         with:
-          path: ./wheelhouse/*.whl
-
+          name: wheels
+          path: dist/*.whl
+        if: ${{ always() }}
+      
   build_sdist:
     name: Build source distribution
     runs-on: ubuntu-latest
