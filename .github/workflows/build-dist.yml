@@ -32,7 +32,6 @@ jobs:
 
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0
           submodules: true
 
       - uses: actions/setup-python@v2
@@ -44,22 +43,11 @@ jobs:
         run: |
           python -m pip install cibuildwheel==2.1.1
 
-      - name: Build wheels for CPython 3.9
-        run: |
-          python -m cibuildwheel --output-dir dist
-        env:
-          CIBW_BUILD: "cp39-*"
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux1
-          CIBW_MANYLINUX_I686_IMAGE: manylinux1
-          CIBW_BEFORE_BUILD: pip install Cython
-          MPL_DISABLE_FH4: "yes"
-          CIBW_ARCHS: ${{ matrix.cibw_archs }}
-
       - name: Build wheels for CPython
         run: |
           python -m cibuildwheel --output-dir dist
         env:
-          CIBW_BUILD: "cp37-* cp38-*"
+          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-*"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux1
           CIBW_MANYLINUX_I686_IMAGE: manylinux1
           CIBW_BEFORE_BUILD: pip install Cython
@@ -68,10 +56,8 @@ jobs:
           
       - uses: actions/upload-artifact@v2
         with:
-          name: wheels
-          path: dist/*.whl
-        if: ${{ always() }}
-      
+          path: ./wheelhouse/*.whl
+
   build_sdist:
     name: Build source distribution
     runs-on: ubuntu-latest
