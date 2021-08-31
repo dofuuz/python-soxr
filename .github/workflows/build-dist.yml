@@ -47,13 +47,21 @@ jobs:
         run: |
           python -m cibuildwheel --output-dir dist
         env:
-          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* pp36-* pp37-*"
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux1
-          CIBW_MANYLINUX_I686_IMAGE: manylinux1
+          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-*"
           CIBW_BEFORE_BUILD: pip install Cython
           MPL_DISABLE_FH4: "yes"
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
-          
+
+      - name: Build wheels for PyPy
+        if: matrix.os == 'ubuntu-18.04'
+        run: |
+          python -m cibuildwheel --output-dir dist
+        env:
+          CIBW_BUILD: "pp36-* pp37-*"
+          CIBW_BEFORE_BUILD: pip install Cython
+          MPL_DISABLE_FH4: "yes"
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
