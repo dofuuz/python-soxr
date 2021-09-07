@@ -2,7 +2,7 @@ Python-SoXR (LGPLv2.1+)
 https://github.com/dofuuz/python-soxr
 
     Python-SoXR, Resampler library for Python.
-    Copyright (c) 2021 github.com/dofuuz
+    Copyright (c) 2021 Myungchul Keum
 
     This library is free software; you can redistribute it and/or modify it
     under the terms of the GNU Lesser General Public License as published by
