@@ -28,7 +28,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.1.1
         env:
           # Skip build errors
-          CIBW_SKIP: "pp*-macosx_x86_64 pp*-win32"
+          CIBW_SKIP: "cp310-macosx_x86_64 pp*-macosx_x86_64 pp*-win32"
 
       - uses: actions/upload-artifact@v2
         with:
@@ -40,6 +40,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
