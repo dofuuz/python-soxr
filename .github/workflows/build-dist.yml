@@ -28,7 +28,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.1.1
         env:
           # Skip build errors
-          CIBW_SKIP: "cp310-macosx_x86_64 pp*-macosx_x86_64 pp*-win32"
+          CIBW_SKIP: "cp310-macosx_x86_64 pp*-macosx_x86_64 pp*-win*"
 
       - uses: actions/upload-artifact@v2
         with:
