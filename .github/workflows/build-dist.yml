@@ -30,10 +30,8 @@ jobs:
           # Skip build errors
           CIBW_SKIP: "cp310-macosx_x86_64 pp*-macosx_x86_64"
           CIBW_BEFORE_BUILD: "git status"
-
-      - name: Git status
-        run: |
-          git status
+          CIBW_BEFORE_TEST: "git status"
+          CIBW_TEST_COMMAND: "pwd"
 
       - uses: actions/upload-artifact@v2
         with:
