@@ -52,6 +52,8 @@ jobs:
         uses: pypa/cibuildwheel@v2.3.0
         env:
           CIBW_ARCHS_LINUX: aarch64
+          # Skip musllinux build to not exeed GitHub Actions time limit
+          CIBW_SKIP: "*-musllinux_*"
 
       - uses: actions/upload-artifact@v2
         with:
