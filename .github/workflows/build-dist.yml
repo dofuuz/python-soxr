@@ -25,10 +25,10 @@ jobs:
           submodules: true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.1.1
+        uses: pypa/cibuildwheel@v2.3.0
         env:
           # Skip build errors
-          CIBW_SKIP: "cp310-macosx_x86_64 pp*-macosx_x86_64 pp*-win*"
+          CIBW_SKIP: "pp37-macosx_x86_64 pp38-*"
 
       - uses: actions/upload-artifact@v2
         with:
@@ -49,9 +49,10 @@ jobs:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.1.1
+        uses: pypa/cibuildwheel@v2.3.0
         env:
           CIBW_ARCHS_LINUX: aarch64
+          CIBW_BUILD: cp*-manylinux_aarch64
 
       - uses: actions/upload-artifact@v2
         with:
@@ -59,7 +60,7 @@ jobs:
 
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
         with:
