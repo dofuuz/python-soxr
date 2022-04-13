@@ -7,7 +7,7 @@
 import numpy as np
 
 from .cysoxr import CySoxr
-from .cysoxr import cysoxr_divide_proc_1d, cysoxr_divide_proc_2d
+from .cysoxr import cysoxr_divide_proc
 from .cysoxr import cysoxr_oneshot
 from .cysoxr import QQ, LQ, MQ, HQ, VHQ
 
@@ -149,13 +149,14 @@ def resample(x, in_rate: float, out_rate: float, quality='HQ'):
     x = np.ascontiguousarray(x)    # make array C-contiguous
 
     if x.ndim == 1:
-        return cysoxr_divide_proc_1d(in_rate, out_rate, x, q)
+        y = cysoxr_divide_proc(in_rate, out_rate, x[:, np.newaxis], q)
+        return np.squeeze(y, axis=1)
     elif x.ndim == 2:
         num_channels = x.shape[1]
         if num_channels < 1 or _CH_LIMIT < num_channels:
             raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
 
-        return cysoxr_divide_proc_2d(in_rate, out_rate, x, q)
+        return cysoxr_divide_proc(in_rate, out_rate, x, q)
     else:
         raise ValueError('Input must be 1-D or 2-D array')
 

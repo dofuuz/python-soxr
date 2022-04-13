@@ -125,67 +125,7 @@ cdef class CySoxr:
         return y
 
 
-cpdef np.ndarray cysoxr_divide_proc_1d(double in_rate, double out_rate,
-                                       const datatype_t[::1] x,
-                                       unsigned long quality):
-    cdef size_t ilen = x.shape[0]
-    cdef size_t olen = np.ceil(ilen * out_rate / in_rate)
-    cdef size_t chunk_len = int(48000 * in_rate / out_rate)
-
-    cdef type ntype
-    if datatype_t is cython.float:
-        ntype = np.float32
-    elif datatype_t is cython.double:
-        ntype = np.float64
-    elif datatype_t is cython.int:
-        ntype = np.int32
-    elif datatype_t is cython.short:
-        ntype = np.int16
-
-    # init soxr
-    cdef csoxr.soxr_error_t err = NULL
-    cdef csoxr.soxr_io_spec_t io_spec = to_io_spec(ntype)
-    cdef csoxr.soxr_quality_spec_t quality_spec = csoxr.soxr_quality_spec(quality, 0)
-
-    cdef csoxr.soxr_t soxr = csoxr.soxr_create(
-        in_rate, out_rate, 1,
-        &err, &io_spec, &quality_spec, NULL)
-
-    if err is not NULL:
-        raise RuntimeError(err)
-
-    # alloc
-    cdef np.ndarray y = np.zeros([olen], dtype=ntype, order='c')
-    cdef datatype_t[::1] y_view = y
-
-    # divide and process
-    cdef size_t odone
-    cdef size_t out_pos = 0
-    cdef size_t proc_len = chunk_len
-    cdef int idx
-    for idx in range(0, ilen, chunk_len):
-        proc_len = min(chunk_len, ilen-idx)
-        csoxr.soxr_process(
-            soxr,
-            &x[idx], proc_len, NULL,
-            &y_view[out_pos], olen-out_pos, &odone)
-        out_pos += odone
-
-    # flush last
-    if out_pos < olen:
-        csoxr.soxr_process(
-            soxr,
-            NULL, 0, NULL,
-            &y_view[out_pos], olen-out_pos, &odone)
-        out_pos += odone
-
-    # destruct
-    csoxr.soxr_delete(soxr)
-
-    return y[:out_pos]
-
-
-cpdef np.ndarray cysoxr_divide_proc_2d(double in_rate, double out_rate,
+cpdef np.ndarray cysoxr_divide_proc(double in_rate, double out_rate,
                                        const datatype_t[:, ::1] x,
                                        unsigned long quality):
     cdef size_t ilen = x.shape[0]
