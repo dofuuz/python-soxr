@@ -125,6 +125,7 @@ cdef class CySoxr:
         return y
 
 
+@cython.boundscheck(False)
 cpdef np.ndarray cysoxr_divide_proc(double in_rate, double out_rate,
                                        const datatype_t[:, ::1] x,
                                        unsigned long quality):
@@ -162,26 +163,34 @@ cpdef np.ndarray cysoxr_divide_proc(double in_rate, double out_rate,
     # divide and process
     cdef size_t odone
     cdef size_t out_pos = 0
-    cdef size_t proc_len = chunk_len
-    cdef int idx
-    for idx in range(0, ilen, chunk_len):
-        proc_len = min(chunk_len, ilen-idx)
-        csoxr.soxr_process(
-            soxr,
-            &x[idx,0], proc_len, NULL,
-            &y_view[out_pos,0], olen-out_pos, &odone)
-        out_pos += odone
+    cdef int idx = 0
+    with nogil:
+        while idx < ilen - chunk_len:
+            csoxr.soxr_process(
+                soxr,
+                &x[idx,0], chunk_len, NULL,
+                &y_view[out_pos,0], olen-out_pos, &odone)
+            out_pos += odone
+            idx += chunk_len
 
-    # flush last
-    if out_pos < olen:
-        csoxr.soxr_process(
-            soxr,
-            NULL, 0, NULL,
-            &y_view[out_pos,0], olen-out_pos, &odone)
-        out_pos += odone
+        # last chunk
+        if idx < ilen:
+            csoxr.soxr_process(
+                soxr,
+                &x[idx,0], ilen-idx, NULL,
+                &y_view[out_pos,0], olen-out_pos, &odone)
+            out_pos += odone
 
-    # destruct
-    csoxr.soxr_delete(soxr)
+        # flush
+        if out_pos < olen:
+            csoxr.soxr_process(
+                soxr,
+                NULL, 0, NULL,
+                &y_view[out_pos,0], olen-out_pos, &odone)
+            out_pos += odone
+
+        # destruct
+        csoxr.soxr_delete(soxr)
 
     return y[:out_pos]
 

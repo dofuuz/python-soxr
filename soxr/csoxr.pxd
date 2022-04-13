@@ -28,7 +28,7 @@ cdef extern from 'soxr.h':
     cdef soxr_error_t soxr_process(
         soxr_t resampler,
         soxr_in_t in_, size_t ilen, size_t *idone,
-        soxr_out_t out, size_t olen, size_t *odone)
+        soxr_out_t out, size_t olen, size_t *odone) nogil
 
     cdef soxr_error_t soxr_error(soxr_t)
     cdef size_t * soxr_num_clips(soxr_t)
@@ -36,7 +36,7 @@ cdef extern from 'soxr.h':
     cdef const char * soxr_engine(soxr_t)
 
     cdef soxr_error_t soxr_clear(soxr_t)
-    cdef void soxr_delete(soxr_t)
+    cdef void soxr_delete(soxr_t) nogil
 
     cdef soxr_error_t soxr_oneshot(
         double input_rate, double output_rate, unsigned num_channels,

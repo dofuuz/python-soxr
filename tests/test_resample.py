@@ -32,14 +32,36 @@ def test_divide_match(in_rate, out_rate, dtype):
 
 
 @pytest.mark.parametrize('in_rate, out_rate', [(44100, 32000), (32000, 44100)])
+@pytest.mark.parametrize('length', [0, 1, 2, 99, 100, 101, 31999, 32000, 32001, 34828, 34829, 34830, 44099, 44100, 44101, 47999, 48000, 48001, 66149, 66150, 66151])
+def test_length_match(in_rate, out_rate, length):
+    x = np.random.randn(length).astype(np.float32)
+
+    y_oneshot = soxr._resample_oneshot(x, in_rate, out_rate)
+    y_divide = soxr.resample(x, in_rate, out_rate)
+
+    assert np.allclose(y_oneshot, y_divide)
+
+
+@pytest.mark.parametrize('channels', [1, 2, 3, 5, 7, 97, 197])
+def test_channel_match(channels):
+    x = np.random.randn(30011, channels).astype(np.float32)
+
+    y_oneshot = soxr._resample_oneshot(x, 44100, 32000)
+    y_divide = soxr.resample(x, 44100, 32000)
+
+    assert np.allclose(y_oneshot, y_divide)
+
+
+@pytest.mark.parametrize('in_rate, out_rate', [(44100, 32000), (32000, 44100)])
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
-def test_stream_match(in_rate, out_rate, dtype):
+@pytest.mark.parametrize('channels', [1, 2])
+def test_stream_match(in_rate, out_rate, dtype, channels):
     CHUNK_SIZE = 509
-    x = np.random.randn(49999).astype(dtype)
+    x = np.random.randn(49999, channels).astype(dtype)
 
     y_oneshot = soxr._resample_oneshot(x, in_rate, out_rate)
 
-    rs_stream = soxr.ResampleStream(in_rate, out_rate, 1, dtype=dtype)
+    rs_stream = soxr.ResampleStream(in_rate, out_rate, channels, dtype=dtype)
 
     y_list = []
     for idx in range(0, len(x), CHUNK_SIZE):
