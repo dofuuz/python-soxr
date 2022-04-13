@@ -163,9 +163,9 @@ cpdef np.ndarray cysoxr_divide_proc(double in_rate, double out_rate,
     # divide and process
     cdef size_t odone
     cdef size_t out_pos = 0
-    cdef int idx = 0
+    cdef size_t idx = 0
     with nogil:
-        while idx < ilen - chunk_len:
+        while idx + chunk_len < ilen:
             csoxr.soxr_process(
                 soxr,
                 &x[idx,0], chunk_len, NULL,
