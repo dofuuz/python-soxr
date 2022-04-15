@@ -109,7 +109,15 @@ class ResampleStream():
         if type(x) != np.ndarray or x.dtype.type != self._type:
             x = np.asarray(x, dtype=self._type)
 
-        return self._cysoxr.process(x, last)
+        x = np.ascontiguousarray(x)    # make array C-contiguous
+
+        if x.ndim == 1:
+            y = self._cysoxr.process(x[:, np.newaxis], last)
+            return np.squeeze(y, axis=1)
+        elif x.ndim == 2:
+            return self._cysoxr.process(x, last)
+        else:
+            raise ValueError('Input must be 1-D or 2-D array')
 
 
 def resample(x, in_rate: float, out_rate: float, quality='HQ'):

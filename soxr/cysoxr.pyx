@@ -70,34 +70,35 @@ cdef class CySoxr:
     def __dealloc__(self):
         csoxr.soxr_delete(self._soxr)
 
-    cpdef np.ndarray process(self, np.ndarray x, bint last=False):
-        if 2 < x.ndim:
-            raise ValueError('Input must be 1-D or 2-D array')
-
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cpdef np.ndarray process(self, const datatype_t[:, ::1] x, bint last=False):
         cdef size_t ilen = x.shape[0]
         cdef size_t olen = np.ceil(ilen * self._out_rate / self._in_rate)
-        cdef unsigned channels = 1
-        if 2 == x.ndim:
-            channels = x.shape[1]
+        cdef unsigned channels = x.shape[1]
 
         if channels != self._channels:
             raise ValueError('Channel num mismatch')
 
-        cdef type ntype = x.dtype.type
+        cdef type ntype
+        if datatype_t is cython.float:
+            ntype = np.float32
+        elif datatype_t is cython.double:
+            ntype = np.float64
+        elif datatype_t is cython.int:
+            ntype = np.int32
+        elif datatype_t is cython.short:
+            ntype = np.int16
+
         if ntype != self._ntype:
             raise ValueError('Data type mismatch')
 
-        x = np.ascontiguousarray(x)
-        cdef np.ndarray y
-        if 1 == x.ndim:
-            y = np.zeros([olen], dtype=ntype, order='c')
-        else:
-            y = np.zeros([olen, channels], dtype=ntype, order='c')
+        cdef np.ndarray y = np.zeros([olen, channels], dtype=ntype, order='c')
 
         cdef size_t odone
         csoxr.soxr_process(
             self._soxr,
-            x.data, ilen, NULL,
+            &x[0,0], ilen, NULL,
             y.data, olen, &odone)
 
         y = y[:odone]
@@ -108,27 +109,26 @@ cdef class CySoxr:
         if last:
             delay = int(csoxr.soxr_delay(self._soxr) + .5)
 
-            if 1 == x.ndim:
-                last_buf = np.zeros([delay], dtype=ntype, order='c')
-            else:
+            if 0 < delay:
                 last_buf = np.zeros([delay, channels], dtype=ntype, order='c')
 
-            csoxr.soxr_process(
-                self._soxr,
-                NULL, 0, NULL,
-                last_buf.data, delay, &odone)
+                csoxr.soxr_process(
+                    self._soxr,
+                    NULL, 0, NULL,
+                    last_buf.data, delay, &odone)
 
-            last_buf = last_buf[:odone]
+                last_buf = last_buf[:odone]
 
-            y = np.concatenate([y, last_buf])
+                y = np.concatenate([y, last_buf])
 
         return y
 
 
 @cython.boundscheck(False)
+@cython.wraparound(False)
 cpdef np.ndarray cysoxr_divide_proc(double in_rate, double out_rate,
-                                       const datatype_t[:, ::1] x,
-                                       unsigned long quality):
+                                    const datatype_t[:, ::1] x,
+                                    unsigned long quality):
     cdef size_t ilen = x.shape[0]
     cdef size_t olen = np.ceil(ilen * out_rate / in_rate)
     cdef size_t chunk_len = int(48000 * in_rate / out_rate)
