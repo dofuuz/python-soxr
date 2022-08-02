@@ -3,6 +3,7 @@
 # Python-SoXR is a Python wrapper of libsoxr.
 # https://github.com/dofuuz/python-soxr
 
+import warnings
 
 import numpy as np
 
@@ -18,8 +19,9 @@ from .version import version as __version__
 # Too much channels will cause memory error.
 _CH_LIMIT = 65536
 
+_CONVERT_WARN_STR = 'Converting input to {}. Change ResampleStream/input dtype to avoid implicit conversion.'
 _CH_EXEED_ERR_STR = 'Channel num({}) out of limit. Should be in [1, %d]' % _CH_LIMIT
-_DTYPE_ERR_STR = "Data type must be one of ['float32', 'float64', 'int16', 'int32'] and not {}"
+_DTYPE_ERR_STR = 'Data type must be one of [float32, float64, int16, int32], not {}'
 _QUALITY_ERR_STR = "Quality must be one of [QQ, LQ, MQ, HQ, VHQ]"
 
 
@@ -45,8 +47,8 @@ def _quality_to_enum(q):
     raise ValueError(_QUALITY_ERR_STR)
 
 
-class ResampleStream():
-    ''' Streaming resampler
+class ResampleStream:
+    """ Streaming resampler
 
         Use `ResampleStream` for real-time processing or very long signal.
 
@@ -64,7 +66,7 @@ class ResampleStream():
         quality : int or str, optional
             Quality setting.
             One of `QQ`, `LQ`, `MQ`, `HQ`, `VHQ`.
-    '''
+    """
 
     def __init__(self,
                  in_rate: float, out_rate: float, num_channels: int,
@@ -75,19 +77,16 @@ class ResampleStream():
         if num_channels < 1 or _CH_LIMIT < num_channels:
             raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
 
-        # internally uses NumPy sclar types, not dtype
-        if type(dtype) != type:
-            dtype = np.dtype(dtype).type
-        if not dtype in (np.float32, np.float64, np.int16, np.int32):
-            raise ValueError(_DTYPE_ERR_STR.format(dtype))
+        self._type = np.dtype(dtype)
+        if self._type not in (np.float32, np.float64, np.int16, np.int32):
+            raise ValueError(_DTYPE_ERR_STR.format(self._type))
 
-        self._type = dtype
         q = _quality_to_enum(quality)
 
-        self._cysoxr = CySoxr(in_rate, out_rate, num_channels, self._type, q)
+        self._cysoxr = CySoxr(in_rate, out_rate, num_channels, self._type.type, q)
 
     def resample_chunk(self, x, last=False):
-        ''' Resample chunk with streaming resampler
+        """ Resample chunk with streaming resampler
 
         Parameters
         ----------
@@ -105,8 +104,9 @@ class ResampleStream():
             Resampled data.
             Output is np.ndarray with same ndim with input.
 
-        '''
-        if type(x) != np.ndarray or x.dtype.type != self._type:
+        """
+        if type(x) != np.ndarray or x.dtype != self._type:
+            warnings.warn(_CONVERT_WARN_STR.format(self._type), stacklevel=2)
             x = np.asarray(x, dtype=self._type)
 
         x = np.ascontiguousarray(x)    # make array C-contiguous
@@ -170,9 +170,9 @@ def resample(x, in_rate: float, out_rate: float, quality='HQ'):
 
 
 def _resample_oneshot(x, in_rate: float, out_rate: float, quality='HQ'):
-    '''
+    """
     Resample using libsoxr's `soxr_oneshot()`. Use `resample()` for general use.
     `soxr_oneshot()` becomes slow with long input.
     This function exists for test purpose.
-    '''
+    """
     return cysoxr_oneshot(in_rate, out_rate, x, _quality_to_enum(quality))
