@@ -47,6 +47,7 @@ cdef class CySoxr:
     cdef double _out_rate
     cdef type _ntype
     cdef unsigned _channels
+    cdef bint _ended
 
     def __cinit__(self,
                   double in_rate, double out_rate, unsigned num_channels,
@@ -55,6 +56,7 @@ cdef class CySoxr:
         self._out_rate = out_rate
         self._ntype = ntype
         self._channels = num_channels
+        self._ended = False
 
         cdef csoxr.soxr_error_t err = NULL
         cdef csoxr.soxr_io_spec_t io_spec = to_io_spec(ntype)
@@ -76,6 +78,9 @@ cdef class CySoxr:
         cdef size_t ilen = x.shape[0]
         cdef size_t olen = np.ceil(ilen * self._out_rate / self._in_rate)
         cdef unsigned channels = x.shape[1]
+
+        if self._ended:
+            raise RuntimeError('Input after last input')
 
         if channels != self._channels:
             raise ValueError('Channel num mismatch')
@@ -107,6 +112,7 @@ cdef class CySoxr:
         cdef np.ndarray last_buf
         cdef int delay
         if last:
+            self._ended = True
             delay = int(csoxr.soxr_delay(self._soxr) + .5)
 
             if 0 < delay:
