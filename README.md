@@ -8,6 +8,8 @@ High quality, one-dimensional sample-rate conversion library for Python.
 - Documentation: https://python-soxr.readthedocs.io
 - PyPI: https://pypi.org/project/soxr/
 
+Keywords: Resampler, Audio resampling, Samplerate conversion, DSP(Digital Signal Processing)
+
 Python-SoXR is a Python wrapper of [libsoxr](https://sourceforge.net/projects/soxr/).
 
 
