@@ -1,7 +1,17 @@
+import sys
+
 from setuptools import find_packages
 from setuptools import setup, Extension
 
 import distutils.util
+
+
+SYS_LIBSOXR = False
+
+# python -m build -C=--global-option=--use-system-libsoxr
+if '--use-system-libsoxr' in sys.argv:
+    sys.argv.remove('--use-system-libsoxr')
+    SYS_LIBSOXR = True
 
 
 class CySoxrExtension(Extension):
@@ -18,7 +28,7 @@ class CySoxrExtension(Extension):
     def include_dirs(self, dirs):
         self._include = dirs
 
-src = [
+src_libsoxr = [
     'libsoxr/src/soxr.c',
     'libsoxr/src/data-io.c',
     'libsoxr/src/dbesi0.c',
@@ -45,7 +55,9 @@ src = [
     # 'libsoxr/src/cr64s.c',
     # 'libsoxr/src/pffft64s.c',
     # 'libsoxr/src/util64s.c',
+]
 
+src = [
     # Cython wrapper
     'src/soxr/cysoxr.pyx'
 ]
@@ -61,16 +73,25 @@ elif '-i686' in platform:
 extensions = [
     CySoxrExtension(
         "soxr.cysoxr",
-        src,
+        src_libsoxr + src,
         include_dirs=['libsoxr/src', 'src/soxr'],
         language="c",
         extra_compile_args=compile_args)
+]
+
+extensions_dynamic = [
+    CySoxrExtension('soxr.cysoxr', src, language='c', libraries=['soxr'])
 ]
 
 
 if __name__ == "__main__":
     from Cython.Build import cythonize
 
-    setup(
-        ext_modules=cythonize(extensions, language_level='3'),
-    )
+    if SYS_LIBSOXR:
+        setup(
+            ext_modules=cythonize(extensions_dynamic, language_level='3'),
+        )
+    else:
+        setup(
+            ext_modules=cythonize(extensions, language_level='3'),
+        )
