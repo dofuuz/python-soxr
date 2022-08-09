@@ -47,7 +47,7 @@ src = [
     # 'libsoxr/src/util64s.c',
 
     # Cython wrapper
-    'soxr/cysoxr.pyx'
+    'src/soxr/cysoxr.pyx'
 ]
 
 compile_args = ['-DSOXR_LIB']
@@ -62,7 +62,7 @@ extensions = [
     CySoxrExtension(
         "soxr.cysoxr",
         src,
-        include_dirs=['libsoxr/src', 'soxr'],
+        include_dirs=['libsoxr/src', 'src/soxr'],
         language="c",
         extra_compile_args=compile_args)
 ]

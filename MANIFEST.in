@@ -2,6 +2,10 @@ include libsoxr/src/*.c
 include libsoxr/src/*.h
 include libsoxr/COPYING.LGPL
 include libsoxr/LICENCE
-include soxr/*.h
+include src/soxr/*.h
+include src/soxr/*.pxd
+include src/soxr/*.py
+include src/soxr/*.pyd
+include src/soxr/*.pyx
 
 global-exclude __pycache__ *.py[cod] .*
