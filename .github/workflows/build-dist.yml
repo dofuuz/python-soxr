@@ -25,10 +25,10 @@ jobs:
           submodules: true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.3.0
+        uses: pypa/cibuildwheel@v2.8.1
         env:
-          # Skip build errors
-          CIBW_SKIP: "pp37-macosx_x86_64 pp38-*"
+          # Skip builds(save time / avoid build error)
+          CIBW_SKIP: "pp37-* pp39-* *-musllinux_*"
 
       - uses: actions/upload-artifact@v2
         with:
