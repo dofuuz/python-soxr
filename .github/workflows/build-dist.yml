@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-2019, macos-10.15]
+        os: [ubuntu-20.04, windows-2019, macos-11]
 
     steps:
       - uses: actions/checkout@v2
@@ -29,6 +29,7 @@ jobs:
         env:
           # Skip builds(save time / avoid build error)
           CIBW_SKIP: "pp37-* pp39-* *-musllinux_*"
+          CIBW_ARCHS_MACOS: x86_64 arm64
 
       - uses: actions/upload-artifact@v2
         with:
