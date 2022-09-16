@@ -22,6 +22,15 @@ pip install soxr
 If installation fails, upgrade pip with `python -m pip install --upgrade pip` and try again.
 
 
+### in Conda environment
+
+```
+conda install -c conda-forge soxr-python
+```
+
+Note: Conda packge name is `soxr-python`, not python-soxr.
+
+
 ## Basic usage
 
 ```python
