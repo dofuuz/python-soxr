@@ -10,7 +10,6 @@ on: [push, pull_request]
 #     types:
 #       - published
 
-
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -20,18 +19,18 @@ jobs:
         os: [ubuntu-20.04, windows-2019, macos-11]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.8.1
+        uses: pypa/cibuildwheel@v2.11.2
         env:
           # Skip builds(save time / avoid build error)
-          CIBW_SKIP: "pp37-* pp39-* *-musllinux_*"
+          CIBW_SKIP: "cp36-* cp37-* pp37-* pp39-* *-musllinux_* *_i686"
           CIBW_ARCHS_MACOS: x86_64 arm64
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
 
@@ -40,22 +39,23 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
         with:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.3.0
+        uses: pypa/cibuildwheel@v2.11.2
         env:
           CIBW_ARCHS_LINUX: aarch64
           CIBW_BUILD: cp*-manylinux_aarch64
+          CIBW_SKIP: "cp36-* cp37-*"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
 
@@ -63,42 +63,33 @@ jobs:
     name: Build source distribution
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
-      - uses: actions/setup-python@v2
-        name: Install Python
-        with:
-          python-version: '3.8'
+      - name: Build sdist
+        run: pipx run build --sdist
 
-      - name: Install deps
-        run: python -m pip install build twine
-
-      - name: Build SDist
-        run: python -m build --sdist
-
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: dist/*.tar.gz
-
-      - name: Check metadata
-        run: twine check dist/*
 
   upload_pypi:
     needs: [build_wheels, build_archs, build_sdist]
     runs-on: ubuntu-latest
     # upload to PyPI on every tag starting with 'v'
-    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     # alternatively, to publish when a GitHub Release is created, use the following rule:
     # if: github.event_name == 'release' && github.event.action == 'published'
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
+          # unpacks default artifact into dist/
+          # if `name: artifact` is omitted, the action will create extra parent dir
           name: artifact
           path: dist
 
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@v1.5.0
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
