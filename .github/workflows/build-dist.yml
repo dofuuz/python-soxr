@@ -53,6 +53,7 @@ jobs:
         env:
           CIBW_ARCHS_LINUX: aarch64
           CIBW_BUILD: cp*-manylinux_aarch64
+          CIBW_SKIP: "cp36-* cp37-*"
 
       - uses: actions/upload-artifact@v3
         with:
