@@ -27,7 +27,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.11.2
         env:
           # Skip builds(save time / avoid build error)
-          CIBW_SKIP: "pp37-* pp39-* *-musllinux_*"
+          CIBW_SKIP: "cp36-* cp37-* pp37-* pp39-* *-musllinux_* *_i686"
           CIBW_ARCHS_MACOS: x86_64 arm64
 
       - uses: actions/upload-artifact@v3
