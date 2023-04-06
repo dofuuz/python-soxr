@@ -1,9 +1,9 @@
 import sys
+import sysconfig
 
-from setuptools import find_packages
 from setuptools import setup, Extension
 
-import distutils.util
+from distutils.ccompiler import get_default_compiler
 
 
 SYS_LIBSOXR = False
@@ -63,12 +63,15 @@ src = [
 ]
 
 compile_args = ['-DSOXR_LIB']
-platform = distutils.util.get_platform()
 
+platform = sysconfig.get_platform()
 if '-arm' in platform:
     compile_args.append('-mfpu=neon')
 elif '-i686' in platform:
     compile_args.append('-msse')
+
+if get_default_compiler() in ['unix', 'mingw32']:
+    compile_args.append('-Werror=implicit-function-declaration')
 
 extensions = [
     CySoxrExtension(
