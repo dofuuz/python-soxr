@@ -71,7 +71,7 @@ elif '-i686' in platform:
     compile_args.append('-msse')
 
 if get_default_compiler() in ['unix', 'mingw32']:
-    compile_args.append('-Werror=implicit-function-declaration')
+    compile_args += ['-std=gnu99', '-Werror=implicit']
 
 extensions = [
     CySoxrExtension(
