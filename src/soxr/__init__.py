@@ -19,7 +19,7 @@ from .version import version as __version__
 # Too much channels will cause memory error.
 _CH_LIMIT = 65536
 
-_CONVERT_WARN_STR = 'Converting input to {}. Change ResampleStream/input dtype to avoid implicit conversion.'
+_CONVERT_WARN_STR = 'Converting input to {}. Change ResampleStream/input dtype to avoid implicit conversion. This implicit conversion is deprecated and will be removed in next major update.'
 _CH_EXEED_ERR_STR = 'Channel num({}) out of limit. Should be in [1, %d]' % _CH_LIMIT
 _DTYPE_ERR_STR = 'Data type must be one of [float32, float64, int16, int32], not {}'
 _QUALITY_ERR_STR = "Quality must be one of [QQ, LQ, MQ, HQ, VHQ]"
@@ -106,7 +106,7 @@ class ResampleStream:
 
         """
         if type(x) != np.ndarray or x.dtype != self._type:
-            warnings.warn(_CONVERT_WARN_STR.format(self._type), stacklevel=2)
+            warnings.warn(_CONVERT_WARN_STR.format(self._type), DeprecationWarning, stacklevel=2)
             x = np.asarray(x, dtype=self._type)
 
         x = np.ascontiguousarray(x)    # make array C-contiguous
