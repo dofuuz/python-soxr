@@ -108,6 +108,6 @@ jobs:
         with:
           # user: __token__
           # password: ${{ secrets.PYPI_API_TOKEN }}
-          To test
+          # To test
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           repository_url: https://test.pypi.org/legacy/
