@@ -24,15 +24,20 @@ jobs:
           submodules: true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.2
+        uses: pypa/cibuildwheel@v2.14.1
         env:
           # Skip builds(save time / avoid build error)
-          CIBW_SKIP: "cp36-* cp37-* pp37-* pp39-* *-musllinux_* *_i686"
+          CIBW_SKIP: "cp36-* pp* *-musllinux_* *_i686"
           CIBW_ARCHS_MACOS: x86_64 arm64
 
       - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
+
+      - uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: ./wheelhouse/*.whl
 
   build_archs:
     name: Build wheels manylinux_aarch64
@@ -49,15 +54,20 @@ jobs:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.2
+        uses: pypa/cibuildwheel@v2.14.1
         env:
           CIBW_ARCHS_LINUX: aarch64
           CIBW_BUILD: cp*-manylinux_aarch64
-          CIBW_SKIP: "cp36-* cp37-*"
+          CIBW_SKIP: "cp36-*"
 
       - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
+
+      - uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: ./wheelhouse/*.whl
 
   build_sdist:
     name: Build source distribution
@@ -74,6 +84,11 @@ jobs:
         with:
           path: dist/*.tar.gz
 
+      - uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: dist/*.tar.gz
+
   upload_pypi:
     needs: [build_wheels, build_archs, build_sdist]
     runs-on: ubuntu-latest
@@ -89,10 +104,10 @@ jobs:
           name: artifact
           path: dist
 
-      - uses: pypa/gh-action-pypi-publish@v1.5.0
+      - uses: pypa/gh-action-pypi-publish@v1.8.8
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          # To test
-          # password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          # repository_url: https://test.pypi.org/legacy/
+          # user: __token__
+          # password: ${{ secrets.PYPI_API_TOKEN }}
+          To test
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
