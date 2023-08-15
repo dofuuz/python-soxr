@@ -80,7 +80,9 @@ jobs:
           submodules: true
 
       - name: Build sdist
-        run: python -m build --sdist
+        run: |
+          python -m pip install build
+          python -m build --sdist
 
       - uses: actions/upload-artifact@v3
         with:
