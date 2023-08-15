@@ -12,7 +12,8 @@ from .cysoxr import cysoxr_divide_proc
 from .cysoxr import cysoxr_oneshot
 from .cysoxr import QQ, LQ, MQ, HQ, VHQ
 
-from .version import version as __version__
+from ._version import __version__
+from ._libsoxr_version import __libsoxr_version__
 
 
 # libsoxr locates memory per each channel.

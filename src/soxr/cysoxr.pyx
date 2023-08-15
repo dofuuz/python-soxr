@@ -24,6 +24,10 @@ ctypedef fused datatype_t:
     cython.short
 
 
+cpdef str libsoxr_version():
+    return csoxr.soxr_version().decode('UTF-8')
+
+
 # NumPy scalar type to soxr_io_spec_t
 cdef csoxr.soxr_io_spec_t to_io_spec(type ntype):
     cdef csoxr.soxr_datatype_t io_type
