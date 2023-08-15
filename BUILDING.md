@@ -23,9 +23,16 @@ python -m build
 libsoxr should be installed before building.  
 (e.g. `sudo apt install libsoxr-dev`)
 ```
-python -m build -C=--global-option=--use-system-libsoxr
+python -m build -C--build-option=--use-system-libsoxr
 ```
 It will link libsoxr dynamically and libsoxr won't bundled in the wheel package.
+
+
+## Install
+Install built .whl package(not .tar.gz sdist).
+```
+pip install dist/soxr-[...].whl
+```
 
 
 ## Test

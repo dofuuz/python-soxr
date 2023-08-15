@@ -58,3 +58,7 @@ cdef extern from 'soxr.h':
     cdef unsigned long SOXR_VHQ
 
     cdef soxr_io_spec_t soxr_io_spec(soxr_datatype_t itype, soxr_datatype_t otype)
+
+
+cdef extern from 'csoxr_version.h':
+    cdef const char * libsoxr_version()
