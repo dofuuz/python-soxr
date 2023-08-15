@@ -29,6 +29,7 @@ jobs:
           # Skip builds(save time / avoid build error)
           CIBW_SKIP: "cp36-* pp* *-musllinux_* *_i686 *-win32"
           CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_BUILD_FRONTEND: "build"
 
       - uses: actions/upload-artifact@v3
         with:
@@ -59,6 +60,7 @@ jobs:
           CIBW_ARCHS_LINUX: aarch64
           CIBW_BUILD: cp*-manylinux_aarch64
           CIBW_SKIP: "cp36-*"
+          CIBW_BUILD_FRONTEND: "build"
 
       - uses: actions/upload-artifact@v3
         with:
@@ -78,7 +80,7 @@ jobs:
           submodules: true
 
       - name: Build sdist
-        run: pipx run build --sdist
+        run: python -m build --sdist
 
       - uses: actions/upload-artifact@v3
         with:
