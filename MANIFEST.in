@@ -2,6 +2,7 @@ include libsoxr/src/*.c
 include libsoxr/src/*.h
 include libsoxr/COPYING.LGPL
 include libsoxr/LICENCE
+include src/soxr/csoxr_version.c
 include src/soxr/*.h
 include src/soxr/*.pxd
 include src/soxr/*.py

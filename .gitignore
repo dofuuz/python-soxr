@@ -1,4 +1,3 @@
-src/soxr/*.c
 src/soxr/_libsoxr_version.py
 src/soxr/_version.py
 

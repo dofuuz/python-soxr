@@ -7,14 +7,12 @@ import warnings
 
 import numpy as np
 
-from .cysoxr import CySoxr
-from .cysoxr import cysoxr_divide_proc
-from .cysoxr import cysoxr_oneshot
+from . import cysoxr
 from .cysoxr import QQ, LQ, MQ, HQ, VHQ
-
 from ._version import __version__
-from ._libsoxr_version import __libsoxr_version__
 
+
+__libsoxr_version__ = cysoxr.libsoxr_version()
 
 # libsoxr locates memory per each channel.
 # Too much channels will cause memory error.
@@ -84,7 +82,7 @@ class ResampleStream:
 
         q = _quality_to_enum(quality)
 
-        self._cysoxr = CySoxr(in_rate, out_rate, num_channels, self._type.type, q)
+        self._cysoxr = cysoxr.CySoxr(in_rate, out_rate, num_channels, self._type.type, q)
 
     def resample_chunk(self, x, last=False):
         """ Resample chunk with streaming resampler
@@ -158,14 +156,14 @@ def resample(x, in_rate: float, out_rate: float, quality='HQ'):
     x = np.ascontiguousarray(x)    # make array C-contiguous
 
     if x.ndim == 1:
-        y = cysoxr_divide_proc(in_rate, out_rate, x[:, np.newaxis], q)
+        y = cysoxr.cysoxr_divide_proc(in_rate, out_rate, x[:, np.newaxis], q)
         return np.squeeze(y, axis=1)
     elif x.ndim == 2:
         num_channels = x.shape[1]
         if num_channels < 1 or _CH_LIMIT < num_channels:
             raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
 
-        return cysoxr_divide_proc(in_rate, out_rate, x, q)
+        return cysoxr.cysoxr_divide_proc(in_rate, out_rate, x, q)
     else:
         raise ValueError('Input must be 1-D or 2-D array')
 
@@ -176,4 +174,4 @@ def _resample_oneshot(x, in_rate: float, out_rate: float, quality='HQ'):
     `soxr_oneshot()` becomes slow with long input.
     This function exists for test purpose.
     """
-    return cysoxr_oneshot(in_rate, out_rate, x, _quality_to_enum(quality))
+    return cysoxr.cysoxr_oneshot(in_rate, out_rate, x, _quality_to_enum(quality))

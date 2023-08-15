@@ -25,7 +25,7 @@ ctypedef fused datatype_t:
 
 
 cpdef str libsoxr_version():
-    return csoxr.soxr_version().decode('UTF-8')
+    return csoxr.libsoxr_version().decode('UTF-8')
 
 
 # NumPy scalar type to soxr_io_spec_t

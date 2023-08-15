@@ -51,32 +51,23 @@ def get_git_version(cwd=''):
     return 'unknown'
 
 
-def write_submodule_version(name, path):
-    ver = get_git_version(path)
-    with open(f'src/soxr/_{name}_version.py', 'wt') as f:
-        f.write(f'__{name}_version__ = "{ver}"')
-    logging.info(f'{name} version: {ver}')
+CSOXR_VERSION_C = '''
+#include "csoxr_version.h"
+const char * libsoxr_version() { return "%s"; }
+'''
 
 
 class SDistBundledCommand(sdist):
     def run(self):
-        write_submodule_version('libsoxr', 'libsoxr')
+        ver = get_git_version('libsoxr')
+        with open(f'src/soxr/_csoxr_version.c', 'wt') as f:
+            f.write(CSOXR_VERSION_C % (ver))
+        logging.info(f'libsoxr version: {ver}')
+
         super().run()
 
 
-LIBSOXR_VERSION_PY = '''
-from .cysoxr import libsoxr_version
-__libsoxr_version__ = libsoxr_version()
-'''
-
-class SDistDynamicCommand(sdist):
-    def run(self):
-        with open('src/soxr/_libsoxr_version.py', 'wt') as f:
-            f.write(LIBSOXR_VERSION_PY)
-        super().run()
-
-
-src_libsoxr = [
+src_static = [
     'libsoxr/src/soxr.c',
     'libsoxr/src/data-io.c',
     'libsoxr/src/dbesi0.c',
@@ -103,11 +94,16 @@ src_libsoxr = [
     # 'libsoxr/src/cr64s.c',
     # 'libsoxr/src/pffft64s.c',
     # 'libsoxr/src/util64s.c',
+
+    # Cython wrapper
+    'src/soxr/cysoxr.pyx',
+    'src/soxr/_csoxr_version.c',  # csoxr libsoxr_version()
 ]
 
-src = [
+src_dynamic = [
     # Cython wrapper
-    'src/soxr/cysoxr.pyx'
+    'src/soxr/cysoxr.pyx',
+    'src/soxr/csoxr_version.c',  # libsoxr soxr_version()
 ]
 
 compile_args = ['-DSOXR_LIB']
@@ -124,14 +120,14 @@ if get_default_compiler() in ['unix', 'mingw32']:
 extensions = [
     CySoxrExtension(
         "soxr.cysoxr",
-        src_libsoxr + src,
+        src_static,
         include_dirs=['libsoxr/src', 'src/soxr'],
         language="c",
         extra_compile_args=compile_args)
 ]
 
 extensions_dynamic = [
-    CySoxrExtension('soxr.cysoxr', src, language='c', libraries=['soxr'])
+    CySoxrExtension('soxr.cysoxr', src_dynamic, language='c', libraries=['soxr'])
 ]
 
 
@@ -141,7 +137,6 @@ if __name__ == "__main__":
     if SYS_LIBSOXR:
         logging.info('Building Python-SoXR using system libsoxr...')
         setup(
-            cmdclass={'sdist': SDistDynamicCommand},
             ext_modules=cythonize(extensions_dynamic, language_level='3'),
         )
     else:
