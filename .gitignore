@@ -1,4 +1,4 @@
-src/soxr/_libsoxr_version.py
+src/soxr/_csoxr_version.c
 src/soxr/_version.py
 
 
