@@ -13,11 +13,12 @@ import sysconfig
 from distutils.ccompiler import get_default_compiler
 from setuptools import setup, Extension
 from setuptools.command.sdist import sdist
+from wheel.bdist_wheel import bdist_wheel
 
 
 SYS_LIBSOXR = False
 
-# python -m build -C=--build-option=--use-system-libsoxr
+# python -m build -C--build-option=--use-system-libsoxr
 if '--use-system-libsoxr' in sys.argv:
     sys.argv.remove('--use-system-libsoxr')
     SYS_LIBSOXR = True
@@ -38,6 +39,7 @@ class CySoxrExtension(Extension):
         self._include = dirs
 
 
+# Submodule versioning
 def get_git_version(cwd=''):
     try:
         result = subprocess.run(
@@ -47,8 +49,8 @@ def get_git_version(cwd=''):
         ver = result.stdout.strip()
         return ver
     except Exception as e:
-        logging.warning(f'Error retrieving submodule version: {e}')
-    return 'unknown'
+        logging.warning(f'Can not get {cwd} version: {e}')
+    return None
 
 
 CSOXR_VERSION_C = '''
@@ -57,13 +59,23 @@ const char * libsoxr_version() { return "%s"; }
 '''
 
 
-class SDistBundledCommand(sdist):
-    def run(self):
-        ver = get_git_version('libsoxr')
+def write_csoxr_version():
+    ver = get_git_version('libsoxr')
+    if ver:
         with open(f'src/soxr/_csoxr_version.c', 'wt') as f:
             f.write(CSOXR_VERSION_C % (ver))
         logging.info(f'libsoxr version: {ver}')
 
+
+class CustomSDistCmd(sdist):
+    def run(self):
+        write_csoxr_version()
+        super().run()
+
+
+class CustomWheelCmd(bdist_wheel):
+    def run(self):
+        write_csoxr_version()
         super().run()
 
 
@@ -142,6 +154,6 @@ if __name__ == "__main__":
     else:
         logging.info('Building Python-SoXR using bundled libsoxr...')
         setup(
-            cmdclass={'sdist': SDistBundledCommand},
+            cmdclass={'sdist': CustomSDistCmd, 'bdist_wheel': CustomWheelCmd},
             ext_modules=cythonize(extensions, language_level='3'),
         )

@@ -21,6 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: true
 
       - name: Build wheels
@@ -40,36 +41,37 @@ jobs:
         with:
           files: ./wheelhouse/*.whl
 
-  build_archs:
-    name: Build wheels manylinux_aarch64
-    runs-on: ubuntu-20.04
+  # build_archs:
+  #   name: Build wheels manylinux_aarch64
+  #   runs-on: ubuntu-20.04
 
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+  #         submodules: true
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-        with:
-          platforms: all
+  #     - name: Set up QEMU
+  #       uses: docker/setup-qemu-action@v2
+  #       with:
+  #         platforms: all
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.14.1
-        env:
-          CIBW_ARCHS_LINUX: aarch64
-          CIBW_BUILD: cp*-manylinux_aarch64
-          CIBW_SKIP: "cp36-*"
-          CIBW_BUILD_FRONTEND: "build"
+  #     - name: Build wheels
+  #       uses: pypa/cibuildwheel@v2.14.1
+  #       env:
+  #         CIBW_ARCHS_LINUX: aarch64
+  #         CIBW_BUILD: cp*-manylinux_aarch64
+  #         CIBW_SKIP: "cp36-*"
+  #         CIBW_BUILD_FRONTEND: "build"
 
-      - uses: actions/upload-artifact@v3
-        with:
-          path: ./wheelhouse/*.whl
+  #     - uses: actions/upload-artifact@v3
+  #       with:
+  #         path: ./wheelhouse/*.whl
 
-      - uses: softprops/action-gh-release@v1
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        with:
-          files: ./wheelhouse/*.whl
+  #     - uses: softprops/action-gh-release@v1
+  #       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+  #       with:
+  #         files: ./wheelhouse/*.whl
 
   build_sdist:
     name: Build source distribution
@@ -77,6 +79,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: true
 
       - name: Build sdist
