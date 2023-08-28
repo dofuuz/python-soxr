@@ -9,7 +9,7 @@ import numpy as np
 
 from . import cysoxr
 from .cysoxr import QQ, LQ, MQ, HQ, VHQ
-from ._version import __version__
+from ._version import version as __version__
 
 
 __libsoxr_version__ = cysoxr.libsoxr_version()
