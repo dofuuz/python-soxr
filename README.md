@@ -1,6 +1,6 @@
 # Python-SoXR
 
-[![GitHub](https://img.shields.io/badge/GitHub-python--soxr-181717?logo=github)](https://github.com/dofuuz/python-soxr) [![PyPI](https://img.shields.io/pypi/v/soxr.svg?logo=pypi)](https://pypi.org/project/soxr/) [![conda-forge](https://img.shields.io/conda/vn/conda-forge/soxr-python?logo=conda-forge)](https://anaconda.org/conda-forge/soxr-python) [![Read the Docs](https://img.shields.io/readthedocs/python-soxr?logo=read-the-docs)](https://python-soxr.readthedocs.io)
+[![GitHub](https://img.shields.io/badge/GitHub-python--soxr-181717?logo=github)](https://github.com/dofuuz/python-soxr) [![PyPI](https://img.shields.io/pypi/v/soxr.svg?logo=pypi)](https://pypi.org/project/soxr/) [![conda-forge](https://img.shields.io/conda/vn/conda-forge/soxr-python?logo=conda-forge)](https://anaconda.org/conda-forge/soxr-python) [![Packaging status](https://repology.org/badge/tiny-repos/python:soxr.svg)](https://repology.org/project/python:soxr/versions) [![Read the Docs](https://img.shields.io/readthedocs/python-soxr?logo=read-the-docs)](https://python-soxr.readthedocs.io)
 
 High quality, one-dimensional sample-rate conversion library for Python.
 
