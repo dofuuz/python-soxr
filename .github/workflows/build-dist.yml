@@ -21,14 +21,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.14.1
+        uses: pypa/cibuildwheel@v2.16.2
         env:
           # Skip builds(save time / avoid build error)
           CIBW_SKIP: "cp36-* pp* *-musllinux_* *_i686 *-win32"
           CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_BUILD_FRONTEND: "build"
 
       - uses: actions/upload-artifact@v3
         with:
@@ -46,6 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: true
 
       - name: Set up QEMU
@@ -54,11 +57,12 @@ jobs:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.14.1
+        uses: pypa/cibuildwheel@v2.16.2
         env:
           CIBW_ARCHS_LINUX: aarch64
           CIBW_BUILD: cp*-manylinux_aarch64
           CIBW_SKIP: "cp36-*"
+          CIBW_BUILD_FRONTEND: "build"
 
       - uses: actions/upload-artifact@v3
         with:
@@ -75,10 +79,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: true
 
       - name: Build sdist
-        run: pipx run build --sdist
+        run: |
+          python -m pip install build
+          python -m build --sdist
 
       - uses: actions/upload-artifact@v3
         with:
