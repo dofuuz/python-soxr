@@ -16,16 +16,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-2019, macos-11]
+        os: [ubuntu-22.04, windows-2022, macos-13]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.2
+        uses: pypa/cibuildwheel@v2.16.5
         env:
           # Skip builds(save time / avoid build error)
           CIBW_SKIP: "cp36-* pp* *-musllinux_* *_i686 *-win32"
@@ -43,10 +43,10 @@ jobs:
 
   build_archs:
     name: Build wheels manylinux_aarch64
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: true
@@ -57,7 +57,7 @@ jobs:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.2
+        uses: pypa/cibuildwheel@v2.16.5
         env:
           CIBW_ARCHS_LINUX: aarch64
           CIBW_BUILD: cp*-manylinux_aarch64
@@ -75,9 +75,9 @@ jobs:
 
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: true
