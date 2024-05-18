@@ -28,7 +28,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.16.5
         env:
           # Skip builds(save time / avoid build error)
-          CIBW_SKIP: "cp36-* pp* *-musllinux_* *_i686 *-win32"
+          CIBW_SKIP: "pp* *-musllinux_* *_i686 *-win32"
           CIBW_ARCHS_MACOS: x86_64 arm64
           CIBW_BUILD_FRONTEND: "build"
 
@@ -53,7 +53,7 @@ jobs:
           submodules: true
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: all
 
@@ -62,7 +62,6 @@ jobs:
         env:
           CIBW_ARCHS_LINUX: aarch64
           CIBW_BUILD: cp*-manylinux_aarch64
-          CIBW_SKIP: "cp36-*"
           CIBW_BUILD_FRONTEND: "build"
 
       - uses: actions/upload-artifact@v4
