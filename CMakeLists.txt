@@ -39,17 +39,21 @@ target_include_directories(soxr_ext PRIVATE
     libsoxr/src/
 )
 
-find_package(OpenMP REQUIRED)
 target_link_libraries(soxr_ext PRIVATE
     soxr
-    OpenMP::OpenMP_CXX
 )
+
+# find_package(OpenMP)
+# if (OpenMP_FOUND)
+#     target_link_libraries(soxr_ext PRIVATE OpenMP::OpenMP_CXX)
+# endif ()
 
 # Install directive for scikit-build-core
 install(TARGETS soxr_ext LIBRARY DESTINATION soxr)
 
 # Build static libsoxr
 option(BUILD_TESTS "" OFF)
+option(WITH_OPENMP "" OFF)
 option(WITH_LSR_BINDINGS "" OFF)
 option(BUILD_SHARED_LIBS "" OFF)  # make it shared someday?
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
