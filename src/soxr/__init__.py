@@ -7,18 +7,18 @@ import warnings
 
 import numpy as np
 
-from . import cysoxr
-from .cysoxr import QQ, LQ, MQ, HQ, VHQ
+from . import soxr_ext
+from .soxr_ext import QQ, LQ, MQ, HQ, VHQ
 from ._version import version as __version__
 
 
-__libsoxr_version__ = cysoxr.libsoxr_version()
+__libsoxr_version__ = soxr_ext.version()
 
 # libsoxr locates memory per each channel.
 # Too much channels will cause memory error.
 _CH_LIMIT = 65536
 
-_CONVERT_WARN_STR = 'Converting input to {}. Change ResampleStream/input dtype to avoid implicit conversion. This implicit conversion is deprecated and will be removed in next major update.'
+_DTYPE_UNMATCH_ERR_STR = 'Converting input ****to {}. Change ResampleStream/input dtype to match.'
 _CH_EXEED_ERR_STR = 'Channel num({}) out of limit. Should be in [1, %d]' % _CH_LIMIT
 _DTYPE_ERR_STR = 'Data type must be one of [float32, float64, int16, int32], not {}'
 _QUALITY_ERR_STR = "Quality must be one of [QQ, LQ, MQ, HQ, VHQ]"
@@ -44,6 +44,20 @@ def _quality_to_enum(q):
         return QQ
 
     raise ValueError(_QUALITY_ERR_STR)
+
+
+# NumPy scalar type to soxr_io_spec_t
+def to_soxr_datatype(ntype):
+    if ntype == np.float32:
+        return soxr_ext.SOXR_FLOAT32_I
+    elif ntype == np.float64:
+        return soxr_ext.SOXR_FLOAT64_I
+    elif ntype == np.int32:
+        return soxr_ext.SOXR_INT32_I
+    elif ntype == np.int16:
+        return soxr_ext.SOXR_INT16_I
+    else:
+        ValueError(_DTYPE_ERR_STR.format(ntype))
 
 
 class ResampleStream:
@@ -77,19 +91,18 @@ class ResampleStream:
             raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
 
         self._type = np.dtype(dtype)
-        if self._type not in (np.float32, np.float64, np.int16, np.int32):
-            raise ValueError(_DTYPE_ERR_STR.format(self._type))
+        stype = to_soxr_datatype(self._type)
 
         q = _quality_to_enum(quality)
 
-        self._cysoxr = cysoxr.CySoxr(in_rate, out_rate, num_channels, self._type.type, q)
+        self._cysoxr = soxr_ext.CySoxr(in_rate, out_rate, num_channels, stype, q)
 
-    def resample_chunk(self, x, last=False):
+    def resample_chunk(self, x: np.ndarray, last=False):
         """ Resample chunk with streaming resampler
 
         Parameters
         ----------
-        x : array_like
+        x : np.ndarray
             Input array. Input can be 1D(mono) or 2D(frames, channels).
             If input is not `np.ndarray` or not dtype in constructor,
             it will be converted to `np.ndarray` with dtype setting.
@@ -105,16 +118,27 @@ class ResampleStream:
 
         """
         if type(x) != np.ndarray or x.dtype != self._type:
-            warnings.warn(_CONVERT_WARN_STR.format(self._type), DeprecationWarning, stacklevel=2)
-            x = np.asarray(x, dtype=self._type)
+            raise ValueError(_DTYPE_UNMATCH_ERR_STR.format(self._type))
+        
+        if x.dtype.type == np.int16:
+            proc = self._cysoxr.process_int16
+
+        if x.dtype.type == np.int32:
+            proc = self._cysoxr.process_int32
+
+        if x.dtype.type == np.float32:
+            proc = self._cysoxr.process_float32
+
+        if x.dtype.type == np.float64:
+            proc = self._cysoxr.process_float64
 
         x = np.ascontiguousarray(x)    # make array C-contiguous
 
         if x.ndim == 1:
-            y = self._cysoxr.process(x[:, np.newaxis], last)
+            y = proc(x[:, np.newaxis], last)
             return np.squeeze(y, axis=1)
         elif x.ndim == 2:
-            return self._cysoxr.process(x, last)
+            return proc(x, last)
         else:
             raise ValueError('Input must be 1-D or 2-D array')
 
@@ -150,20 +174,32 @@ def resample(x, in_rate: float, out_rate: float, quality='HQ'):
 
     if not x.dtype.type in (np.float32, np.float64, np.int16, np.int32):
         raise ValueError(_DTYPE_ERR_STR.format(x.dtype.type))
+    
+    if x.dtype.type == np.int16:
+        divide_proc = soxr_ext.cysoxr_divide_proc_int16
+
+    if x.dtype.type == np.int32:
+        divide_proc = soxr_ext.cysoxr_divide_proc_int32
+
+    if x.dtype.type == np.float32:
+        divide_proc = soxr_ext.cysoxr_divide_proc_float32
+
+    if x.dtype.type == np.float64:
+        divide_proc = soxr_ext.cysoxr_divide_proc_float64
 
     q = _quality_to_enum(quality)
 
     x = np.ascontiguousarray(x)    # make array C-contiguous
 
     if x.ndim == 1:
-        y = cysoxr.cysoxr_divide_proc(in_rate, out_rate, x[:, np.newaxis], q)
+        y = divide_proc(in_rate, out_rate, x[:, np.newaxis], q)
         return np.squeeze(y, axis=1)
     elif x.ndim == 2:
         num_channels = x.shape[1]
         if num_channels < 1 or _CH_LIMIT < num_channels:
             raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
 
-        return cysoxr.cysoxr_divide_proc(in_rate, out_rate, x, q)
+        return divide_proc(in_rate, out_rate, x, q)
     else:
         raise ValueError('Input must be 1-D or 2-D array')
 
@@ -174,4 +210,20 @@ def _resample_oneshot(x, in_rate: float, out_rate: float, quality='HQ'):
     `soxr_oneshot()` becomes slow with long input.
     This function exists for test purpose.
     """
-    return cysoxr.cysoxr_oneshot(in_rate, out_rate, x, _quality_to_enum(quality))
+    if x.dtype.type == np.int16:
+        oneshot = soxr_ext.cysoxr_oneshot_int16
+
+    if x.dtype.type == np.int32:
+        oneshot = soxr_ext.cysoxr_oneshot_int32
+
+    if x.dtype.type == np.float32:
+        oneshot = soxr_ext.cysoxr_oneshot_float32
+
+    if x.dtype.type == np.float64:
+        oneshot = soxr_ext.cysoxr_oneshot_float64
+
+    if x.ndim == 1:
+        y = oneshot(in_rate, out_rate, x[:, np.newaxis], _quality_to_enum(quality))
+        return np.squeeze(y, axis=1)
+
+    return oneshot(in_rate, out_rate, x, _quality_to_enum(quality))
