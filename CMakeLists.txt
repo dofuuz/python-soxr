@@ -58,7 +58,5 @@ option(WITH_LSR_BINDINGS "" OFF)
 option(BUILD_SHARED_LIBS "" OFF)  # make it shared someday?
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INSTALL_PREFIX ../install)
-if (POLICY CMP0990)
-    cmake_policy(SET CMP0115 OLD)
-endif ()
+set(CMAKE_POLICY_DEFAULT_CMP0115 OLD)  # suppress policy warnings
 add_subdirectory(libsoxr libsoxr)
