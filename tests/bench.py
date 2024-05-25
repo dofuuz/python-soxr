@@ -5,14 +5,13 @@ Created on Fri May  7 21:40:53 2021
 @author: dof
 """
 
-import time
+import timeit
 
 import numpy as np
 
-import resampy
 import soxr
 
-
+REPEAT = 1000
 P = 48000
 Q = 44100
 
@@ -24,50 +23,45 @@ offset = 2000
 instfreq = np.exp(np.linspace(np.log(offset+100), np.log(offset+23900), 96000))-offset
 deltaphase = 2*np.pi*instfreq/P
 cphase = np.cumsum(deltaphase)
-sig = np.sin(cphase, dtype=np.float32)
+sig = np.sin(cphase)
+sig = np.asarray([sig, sig, sig, sig], dtype=np.float64).T
 
 
 # soxr oneshot
-start_time = time.perf_counter()
-y_oneshot = soxr._resample_oneshot(sig, P, Q)
-print('soxr oneshot: {:f} (sec), {}'.format(
-    time.perf_counter() - start_time,
-    y_oneshot.shape))
+t = timeit.timeit(lambda: soxr._resample_oneshot(sig, P, Q), number=REPEAT)
+print(f'soxr oneshot: {t:f} (sec)')
 
 
 # soxr resample
-start_time = time.perf_counter()
-y_resample = soxr.resample(sig, P, Q)
-print('soxr resample: {:f} (sec), {}'.format(
-    time.perf_counter() - start_time,
-    y_resample.shape))
+t = timeit.timeit(lambda: soxr.resample(sig, P, Q), number=REPEAT)
+print(f'soxr resample: {t:f} (sec)')
 
 
 # soxr stream
-start_time = time.perf_counter()
+def soxr_stream():
+    rs_stream = soxr.ResampleStream(P, Q, sig.shape[1], dtype=sig.dtype)
 
-rs_stream = soxr.ResampleStream(P, Q, 1, dtype=sig.dtype)
+    y_list = []
+    for idx in range(0, len(sig), CHUNK_SIZE):
+        end = idx + CHUNK_SIZE
+        eof = False
+        if len(sig) <= end:
+            eof = True
+            end = len(sig)
+        y_chunk = rs_stream.resample_chunk(sig[idx:end], last=eof)
+        y_list.append(y_chunk)
 
-y_list = []
-for idx in range(0, len(sig), CHUNK_SIZE):
-    end = idx + CHUNK_SIZE
-    eof = False
-    if len(sig) <= end:
-        eof = True
-        end = len(sig)
-    y_chunk = rs_stream.resample_chunk(sig[idx:end], last=eof)
-    y_list.append(y_chunk)
+    return np.concatenate(y_list)
 
-y_stream = np.concatenate(y_list)
-
-print('soxr stream: {:f} (sec), {}'.format(
-    time.perf_counter() - start_time,
-    y_stream.shape))
+t = timeit.timeit(soxr_stream, number=REPEAT)
+print(f'soxr stream: {t:f} (sec)')
 
 
 # resampy kaiser_fast
-start_time = time.perf_counter()
-y_resampy = resampy.resample(sig.T, P, Q, filter='kaiser_fast')
-print('resampy kaiser_fast: {:f} (sec), {}'.format(
-    time.perf_counter() - start_time,
-    y_resampy.shape))
+try:
+    import resampy
+
+    t = timeit.timeit(lambda: resampy.resample(sig.T, P, Q, filter='kaiser_fast'), number=REPEAT)
+    print(f'resampy kaiser_fast: {t:f} (sec)')
+except ModuleNotFoundError:
+    pass
