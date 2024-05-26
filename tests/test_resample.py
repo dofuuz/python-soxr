@@ -1,3 +1,13 @@
+"""
+Python-SoXR
+https://github.com/dofuuz/python-soxr
+
+SPDX-FileCopyrightText: (c) 2021 Myungchul Keum
+SPDX-License-Identifier: LGPL-2.1-or-later
+
+High quality, one-dimensional sample-rate conversion library for Python.
+Python-SoXR is a Python wrapper of libsoxr.
+"""
 
 import numpy as np
 import pytest
@@ -18,6 +28,13 @@ def test_dtype(dtype):
     y = soxr.resample(x, 100, 200)
 
     assert x.dtype == y.dtype
+
+
+@pytest.mark.xfail(raises=TypeError, strict=True)
+@pytest.mark.parametrize('dtype', [np.complex64, np.complex128, np.int8, np.int64])
+def test_bad_dtype(dtype):
+    x = np.zeros(100, dtype=dtype)
+    soxr.resample(x, 100, 200)
 
 
 @pytest.mark.parametrize('in_rate, out_rate', [(44100, 32000), (32000, 44100)])
@@ -82,15 +99,31 @@ def make_tone(freq, sr, duration):
     return np.sin(2 * np.pi * freq / sr * np.arange(int(sr * duration)))
 
 
-@pytest.mark.parametrize('in_rate,out_rate', [(44100, 22050), (22050, 44100)])
+@pytest.mark.parametrize('in_rate,out_rate', [(44100, 22050), (22050, 32000)])
 @pytest.mark.parametrize('quality', ['VHQ', 'HQ', 'MQ', 'LQ', 'QQ'])
 def test_quality_sine(in_rate, out_rate, quality):
-    FREQ = 512.0
+    FREQ = 32.0
     DURATION = 2.0
+    IG = 50  # ignore popping at start/end
+
     x = make_tone(FREQ, in_rate, DURATION)
     y = make_tone(FREQ, out_rate, DURATION)
 
     y_pred = soxr.resample(x, in_rate, out_rate, quality=quality)
 
-    err = np.mean(np.abs(y-y_pred))
-    assert err < 1e-5
+    assert np.allclose(y[IG:-IG], y_pred[IG:-IG], atol=1e-4)
+
+
+@pytest.mark.parametrize('in_rate,out_rate', [(48000, 24000), (32000, 44100)])
+@pytest.mark.parametrize('dtype', [np.int32, np.int16])
+def test_int_sine(in_rate, out_rate, dtype):
+    FREQ = 32.0
+    DURATION = 2.0
+    IG = 50  # ignore popping at start/end
+
+    x = (make_tone(FREQ, in_rate, DURATION) * 16384).astype(dtype)
+    y = (make_tone(FREQ, out_rate, DURATION) * 16384).astype(dtype)
+
+    y_pred = soxr.resample(x, in_rate, out_rate)
+
+    assert np.allclose(y[IG:-IG], y_pred[IG:-IG], atol=2)

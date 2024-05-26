@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri May  7 21:40:53 2021
+Python-SoXR
+https://github.com/dofuuz/python-soxr
 
-@author: dof
+SPDX-FileCopyrightText: (c) 2021 Myungchul Keum
+SPDX-License-Identifier: LGPL-2.1-or-later
+
+High quality, one-dimensional sample-rate conversion library for Python.
+Python-SoXR is a Python wrapper of libsoxr.
 """
 
 import timeit
