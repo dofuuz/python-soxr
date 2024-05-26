@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('..'))
 import importlib.metadata
 
 project = 'Python-SoXR'
-copyright = '2021-23, Myungchul Keum'
+copyright = '2021-24 Myungchul Keum'
 author = 'Myungchul Keum'
 
 # The full version, including alpha/beta/rc tags
