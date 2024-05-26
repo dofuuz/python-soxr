@@ -1,3 +1,14 @@
+/*
+Python-SoXR
+https://github.com/dofuuz/python-soxr
+
+SPDX-FileCopyrightText: (c) 2024 Myungchul Keum
+SPDX-License-Identifier: LGPL-2.1-or-later
+
+High quality, one-dimensional sample-rate conversion library for Python.
+Python-SoXR is a Python wrapper of libsoxr.
+*/
+
 #include <stdint.h>
 #include <algorithm>
 #include <cmath>
@@ -13,13 +24,13 @@ using std::type_info;
 
 namespace nb = nanobind;
 using namespace nb::literals;
+using nb::ndarray;
 
 
-// C type to soxr_io_spec_t
 static soxr_datatype_t to_soxr_datatype(const type_info& ntype) {
     if (ntype == typeid(float))
         return SOXR_FLOAT32_I;
-    else if (ntype ==typeid(double))
+    else if (ntype == typeid(double))
         return SOXR_FLOAT64_I;
     else if (ntype == typeid(int32_t))
         return SOXR_INT32_I;
@@ -28,6 +39,7 @@ static soxr_datatype_t to_soxr_datatype(const type_info& ntype) {
     else
         throw nb::type_error("Data type not support");
 }
+
 
 class CySoxr {
     soxr_t _soxr;
@@ -38,7 +50,8 @@ class CySoxr {
     bool _ended;
 
 public:
-    CySoxr(double in_rate, double out_rate, unsigned num_channels, soxr_datatype_t ntype, unsigned long quality) {
+    CySoxr(double in_rate, double out_rate, unsigned num_channels,
+           soxr_datatype_t ntype, unsigned long quality) {
         _in_rate = in_rate;
         _out_rate = out_rate;
         _ntype = ntype;
@@ -63,7 +76,9 @@ public:
     }
 
     template <typename T>
-    auto process(nb::ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x, bool last=false) {
+    auto process(
+            ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
+            bool last=false) {
         size_t ilen = x.shape(0);
         size_t olen = 2 * ilen * _out_rate / _in_rate + 1;
         unsigned channels = x.shape(1);
@@ -88,6 +103,9 @@ public:
             x.data(), ilen, NULL,
             y, olen, &odone);
 
+        if (err != NULL)
+            throw std::runtime_error(err);
+
         // flush if last input
         if (last) {
             _ended = true;
@@ -104,24 +122,29 @@ public:
                     NULL, 0, NULL,
                     &last_buf[odone*channels], delay, &ldone);
 
+                if (err != NULL)
+                    throw std::runtime_error(err);
+
                 nb::capsule last_owner(last_buf, [](void *p) noexcept {
                     delete[] (T *) p;
                 });
-                return nb::ndarray<nb::numpy, T>(last_buf, { odone+ldone, channels }, last_owner);
+                return ndarray<nb::numpy, T>(
+                    last_buf, { odone+ldone, channels }, last_owner);
             }
         }
         // Delete 'y' when the 'owner' capsule expires
         nb::capsule owner(y, [](void *p) noexcept {
             delete[] (T *) p;
         });
-        return nb::ndarray<nb::numpy, T>(y, { odone, channels }, owner);
+        return ndarray<nb::numpy, T>(y, { odone, channels }, owner);
     }
 };
 
 
 template <typename T>
-auto cysoxr_divide_proc(double in_rate, double out_rate,
-        nb::ndarray<T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
+auto cysoxr_divide_proc(
+        double in_rate, double out_rate,
+        ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
         unsigned long quality) {
     size_t ilen = x.shape(0);
     size_t olen = ilen * out_rate / in_rate + 1;
@@ -187,14 +210,14 @@ auto cysoxr_divide_proc(double in_rate, double out_rate,
     nb::capsule owner(y, [](void *p) noexcept {
        delete[] (T *) p;
     });
-    return nb::ndarray<nb::numpy, T>(y, { out_pos, channels }, owner);
+    return ndarray<nb::numpy, T>(y, { out_pos, channels }, owner);
 }
 
 
 template <typename T>
 auto cysoxr_oneshot(
         double in_rate, double out_rate,
-        nb::ndarray<T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
+        ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
         unsigned long quality) {
     const size_t ilen = x.shape(0);
     const size_t olen = ilen * out_rate / in_rate + 1;
@@ -224,7 +247,7 @@ auto cysoxr_oneshot(
     nb::capsule owner(y, [](void *p) noexcept {
        delete[] (T *) p;
     });
-    return nb::ndarray<nb::numpy, T>(y, { odone, channels }, owner);
+    return ndarray<nb::numpy, T>(y, { odone, channels }, owner);
 }
 
 
