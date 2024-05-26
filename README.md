@@ -76,6 +76,8 @@ while not eof:
 Output frame count may not be consistent. This is normal operation.  
 (ex. [0, 0, 0, 186, 186, 166, 186, 186, 168, ...])
 
+📝 [More code examples](https://dofuuz.github.io/dsp/2024/05/26/sample-rate-conversion-in-python.html)
+
 
 ## Requirement
 
