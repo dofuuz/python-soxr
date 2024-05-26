@@ -172,32 +172,34 @@ auto cysoxr_divide_proc(
     size_t odone = 0;
     size_t out_pos = 0;
     size_t idx = 0;
-    // with nogil:
-    while (idx + chunk_len < ilen) {
-        err = soxr_process(
-            soxr,
-            &x.data()[idx*channels], chunk_len, NULL,
-            &y[out_pos*channels], olen-out_pos, &odone);
-        out_pos += odone;
-        idx += chunk_len;
-    }
+    {
+        nb::gil_scoped_release release;
+        while (idx + chunk_len < ilen) {
+            err = soxr_process(
+                soxr,
+                &x.data()[idx*channels], chunk_len, NULL,
+                &y[out_pos*channels], olen-out_pos, &odone);
+            out_pos += odone;
+            idx += chunk_len;
+        }
 
-    // last chunk
-    if (idx < ilen) {
-        err = soxr_process(
-            soxr,
-            &x.data()[idx*channels], ilen-idx, NULL,
-            &y[out_pos*channels], olen-out_pos, &odone);
-        out_pos += odone;
-    }
+        // last chunk
+        if (idx < ilen) {
+            err = soxr_process(
+                soxr,
+                &x.data()[idx*channels], ilen-idx, NULL,
+                &y[out_pos*channels], olen-out_pos, &odone);
+            out_pos += odone;
+        }
 
-    // flush
-    if (out_pos < olen) {
-        err = soxr_process(
-            soxr,
-            NULL, 0, NULL,
-            &y[out_pos*channels], olen-out_pos, &odone);
-        out_pos += odone;
+        // flush
+        if (out_pos < olen) {
+            err = soxr_process(
+                soxr,
+                NULL, 0, NULL,
+                &y[out_pos*channels], olen-out_pos, &odone);
+            out_pos += odone;
+        }
     }
 
     if (err != NULL)
