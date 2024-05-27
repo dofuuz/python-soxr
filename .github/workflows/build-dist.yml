@@ -1,7 +1,7 @@
 name: Build and upload to PyPI
 
 # Build on every branch push, tag push, and pull request change:
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 # Alternatively, to publish when a (published) GitHub Release is created, use the following:
 # on:
 #   push:
@@ -15,8 +15,10 @@ jobs:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-2022, macos-13]
+        # macos-13 is an intel runner, macos-14 is apple silicon
+        os: [ubuntu-22.04, windows-2022, macos-13, macos-14]
 
     steps:
       - uses: actions/checkout@v4
@@ -25,22 +27,15 @@ jobs:
           submodules: true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.17
         env:
           # Skip builds(save time / avoid build error)
           CIBW_SKIP: "pp* *-musllinux_* *_i686 *-win32"
-          CIBW_ARCHS_MACOS: x86_64 arm64
-          CIBW_BUILD_FRONTEND: "build"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
-
-      - uses: softprops/action-gh-release@v2
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        with:
-          files: ./wheelhouse/*.whl
 
   build_archs:
     name: Build wheels manylinux_aarch64
@@ -58,21 +53,15 @@ jobs:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.17
         env:
           CIBW_ARCHS_LINUX: aarch64
           CIBW_BUILD: cp*-manylinux_aarch64
-          CIBW_BUILD_FRONTEND: "build"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: archs
+          name: cibw-wheels-archs
           path: ./wheelhouse/*.whl
-
-      - uses: softprops/action-gh-release@v2
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        with:
-          files: ./wheelhouse/*.whl
 
   build_sdist:
     name: Build source distribution
@@ -83,20 +72,16 @@ jobs:
           fetch-depth: 0
           submodules: true
 
-      - name: Build sdist
-        run: |
-          python -m pip install build
-          python -m build --sdist
+      - name: Build SDist
+        run: pipx run build --sdist
+
+      - name: Check metadata
+        run: pipx run twine check dist/*
 
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: dist/*.tar.gz
-
-      - uses: softprops/action-gh-release@v2
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        with:
-          files: dist/*.tar.gz
 
   upload_pypi:
     needs: [build_wheels, build_archs, build_sdist]
@@ -112,7 +97,14 @@ jobs:
           pattern: "*"
           merge-multiple: true
 
-      - uses: pypa/gh-action-pypi-publish@v1.8.8
+      - uses: softprops/action-gh-release@v2
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.whl
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}

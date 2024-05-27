@@ -1,13 +1,11 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
 name: Run tests
 
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "pypy3.9"]
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -23,10 +21,14 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install library
+    - name: Set min macOS version
+      if: runner.os == 'macOS'
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install .[test]
+        echo "MACOS_DEPLOYMENT_TARGET=10.14" >> $GITHUB_ENV
+
+    - name: Build and install
+      run: python -m pip install pytest
+           pip install --verbose .
 
     - name: Test with pytest
       run: |
