@@ -25,6 +25,9 @@ if (NOT SKBUILD)
     after editing C++ files.")
 endif()
 
+# Turn on to link libsoxr dynamically and not to bundle libsoxr in the wheel package
+option(USE_SYSTEM_LIBSOXR "Build using system libsoxr" OFF)
+
 find_package(Python 3.9
     REQUIRED COMPONENTS Interpreter Development.Module
     OPTIONAL_COMPONENTS Development.SABIModule)
@@ -35,28 +38,32 @@ nanobind_add_module(soxr_ext STABLE_ABI NB_STATIC
     src/soxr_ext.cpp
 )
 
-target_include_directories(soxr_ext PRIVATE
-    libsoxr/src/
-)
-
 target_link_libraries(soxr_ext PRIVATE
     soxr
 )
 
-# find_package(OpenMP)
-# if (OpenMP_FOUND)
-#     target_link_libraries(soxr_ext PRIVATE OpenMP::OpenMP_CXX)
-# endif ()
-
 # Install directive for scikit-build-core
 install(TARGETS soxr_ext LIBRARY DESTINATION soxr)
 
-# Build static libsoxr
-option(BUILD_TESTS "" OFF)
-option(WITH_OPENMP "" OFF)
-option(WITH_LSR_BINDINGS "" OFF)
-option(BUILD_SHARED_LIBS "" OFF)  # make it shared someday?
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_INSTALL_PREFIX ../install)
-set(CMAKE_POLICY_DEFAULT_CMP0115 OLD)  # suppress policy warnings
-add_subdirectory(libsoxr libsoxr)
+if (NOT USE_SYSTEM_LIBSOXR)
+    target_include_directories(soxr_ext PRIVATE
+        libsoxr/src/
+    )
+
+    # find_package(OpenMP)
+    # if (OpenMP_FOUND)
+    #     target_link_libraries(soxr_ext PRIVATE OpenMP::OpenMP_CXX)
+    # endif ()
+
+    # Build static libsoxr
+    option(BUILD_TESTS "" OFF)
+    option(WITH_OPENMP "" OFF)
+    option(WITH_LSR_BINDINGS "" OFF)
+    option(BUILD_SHARED_LIBS "" OFF)  # make it shared someday?
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    set(CMAKE_INSTALL_PREFIX ../install)
+    set(CMAKE_POLICY_DEFAULT_CMP0115 OLD)  # suppress policy warnings
+    add_subdirectory(libsoxr libsoxr)
+
+    # TODO: copy license to package
+endif ()

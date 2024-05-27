@@ -5,9 +5,6 @@
 # Upgrade PIP
 python -m pip install --upgrade pip
 
-# Install dependencies
-pip install build
-
 # Clone code including submodule
 git clone --recurse-submodules https://github.com/dofuuz/python-soxr.git
 ```
@@ -16,22 +13,23 @@ git clone --recurse-submodules https://github.com/dofuuz/python-soxr.git
 ## Build package(wheel)
 ```
 cd python-soxr
-python -m build
+pip wheel -ve .
 ```
 
 ### (Alternative method) Build using system libsoxr
 libsoxr should be installed before building.  
 (e.g. `sudo apt install libsoxr-dev`)
 ```
-python -m build -C--build-option=--use-system-libsoxr
+export CMAKE_ARGS="-DUSE_SYSTEM_LIBSOXR=ON"
+pip wheel -ve .
 ```
-It will link libsoxr dynamically and libsoxr won't bundled in the wheel package.
+It will link libsoxr dynamically and won't bundle libsoxr in the wheel package.
 
 
 ## Install
 Install built .whl package(not .tar.gz sdist).
 ```
-pip install dist/soxr-[...].whl
+pip install ./soxr-[...].whl
 ```
 
 
