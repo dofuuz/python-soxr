@@ -38,14 +38,25 @@ if (USE_SYSTEM_LIBSOXR)
     set(CSOXR_VER_C src/csoxr_version.cpp)
 else ()
     # libsoxr VCS versioning
-    set(CSOXR_VER_C ${CMAKE_BINARY_DIR}/csoxr_ver_vcs.cpp)
-    add_custom_target(soxr_version_vcs
-        ${CMAKE_COMMAND}
-            -DVERSION_IN=${CMAKE_CURRENT_SOURCE_DIR}/src/csoxr_ver_vcs.cpp.in
+    set(CSOXR_VER_C ${CMAKE_CURRENT_SOURCE_DIR}/src/csoxr_ver_vcs.cpp)
+    set(SOXR_VER_COMMAND ${CMAKE_COMMAND}
+            -DVERSION_IN=src/csoxr_ver_vcs.cpp.in
             -DVERSION_C=${CSOXR_VER_C}
-            -DVCS_REPO_DIR=${CMAKE_CURRENT_SOURCE_DIR}/libsoxr
-            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/versioning.cmake
+            -DVCS_REPO_DIR=libsoxr
+            -P cmake/versioning.cmake
+    )
+
+    # run while CMake configuring (for sdist)
+    execute_process(
+        COMMAND ${SOXR_VER_COMMAND}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    # run at every build time
+    add_custom_target(soxr_version_vcs
+        COMMAND ${SOXR_VER_COMMAND}
         BYPRODUCTS ${CSOXR_VER_C}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 endif ()
 

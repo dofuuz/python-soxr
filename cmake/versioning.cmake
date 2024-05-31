@@ -4,11 +4,12 @@
 #    set(VER_C ${CMAKE_BINARY_DIR}/ver_vcs.cpp)
 #    add_custom_target(version_vcs
 #        ${CMAKE_COMMAND}
-#            -DVERSION_IN=${CMAKE_CURRENT_SOURCE_DIR}/ver_vcs.cpp.in
+#            -DVERSION_IN=ver_vcs.cpp.in
 #            -DVERSION_C=${VER_C}
-#            -DVCS_REPO_DIR=${CMAKE_CURRENT_SOURCE_DIR}/submodule  # optional
-#            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/versioning.cmake
+#            -DVCS_REPO_DIR=submodule  # optional
+#            -P cmake/versioning.cmake
 #        BYPRODUCTS ${VER_C}
+#        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 #    )
 
 if (NOT DEFINED VCS_REPO_DIR)
@@ -30,10 +31,10 @@ if (GIT_EXECUTABLE)
     endif ()
 endif ()
 
-if (NOT DEFINED VCS_VERSION)
-    set(VCS_VERSION v0.0.0-unknown)
+get_filename_component(VCS_MODULE ${VCS_REPO_DIR} NAME)
+if (VCS_VERSION)
+    message("${VCS_MODULE} VCS_VERSION: " ${VCS_VERSION})
+    configure_file(${VERSION_IN} ${VERSION_C})
+else ()
+    message("${VCS_MODULE} VCS_VERSION unknown. ${VERSION_C} not changed.")
 endif ()
-
-message("GIT_VERSION: " ${GIT_VERSION})
-
-configure_file(${VERSION_IN} ${VERSION_C})
