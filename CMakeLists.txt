@@ -77,6 +77,7 @@ if (NOT USE_SYSTEM_LIBSOXR)
     option(WITH_OPENMP "" OFF)
     option(WITH_LSR_BINDINGS "" OFF)
     option(BUILD_SHARED_LIBS "" OFF)  # make it shared someday?
+    option(WITH_VR32 "" OFF)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     set(CMAKE_INSTALL_PREFIX ../install)
     set(CMAKE_POLICY_DEFAULT_CMP0115 OLD)  # suppress policy warnings
