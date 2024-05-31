@@ -235,11 +235,11 @@ NB_MODULE(soxr_ext, m) {
     m.def("libsoxr_version", libsoxr_version);
 
     nb::class_<CySoxr>(m, "CySoxr")
-        .def_ro("_in_rate", &CySoxr::_in_rate)
-        .def_ro("_out_rate", &CySoxr::_out_rate)
-        .def_ro("_ntype", &CySoxr::_ntype)
-        .def_ro("_channels", &CySoxr::_channels)
-        .def_ro("_ended", &CySoxr::_ended)
+        .def_ro("in_rate", &CySoxr::_in_rate)
+        .def_ro("out_rate", &CySoxr::_out_rate)
+        .def_ro("ntype", &CySoxr::_ntype)
+        .def_ro("channels", &CySoxr::_channels)
+        .def_ro("ended", &CySoxr::_ended)
         .def(nb::init<double, double, unsigned, soxr_datatype_t, unsigned long>())
         .def("process_float32", &CySoxr::process<float>)
         .def("process_float64", &CySoxr::process<double>)

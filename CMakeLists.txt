@@ -65,12 +65,20 @@ nanobind_add_module(soxr_ext STABLE_ABI NB_STATIC
     ${CSOXR_VER_C}
 )
 
+nanobind_add_stub(soxr_ext_stub
+    MODULE soxr_ext
+    OUTPUT soxr_ext.pyi
+    PYTHON_PATH $<TARGET_FILE_DIR:soxr_ext>
+    DEPENDS soxr_ext
+)
+
 target_link_libraries(soxr_ext PRIVATE
     soxr
 )
 
 # Install directive for scikit-build-core
 install(TARGETS soxr_ext LIBRARY DESTINATION soxr)
+install(FILES ${CMAKE_BINARY_DIR}/soxr_ext.pyi DESTINATION soxr)
 
 if (NOT USE_SYSTEM_LIBSOXR)
     target_include_directories(soxr_ext PRIVATE

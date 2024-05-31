@@ -4,6 +4,7 @@ requires = [
     "nanobind >=2",
     "setuptools>=45",
     "setuptools_scm[toml]>=6.2",
+    "typing-extensions; python_version < '3.11'",
 ]
 build-backend = "scikit_build_core.build"
 
