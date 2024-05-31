@@ -94,5 +94,7 @@ if (NOT USE_SYSTEM_LIBSOXR)
     set(CMAKE_POLICY_DEFAULT_CMP0115 OLD)  # suppress policy warnings
     add_subdirectory(libsoxr libsoxr)
 
-    # TODO: copy license to package
+    # Copy licenses to package (scikit-build-core)
+    install(FILES cmake/LICENSE-PFFFT.txt DESTINATION ${SKBUILD_METADATA_DIR}/licenses)
+    install(FILES libsoxr/LICENCE DESTINATION ${SKBUILD_METADATA_DIR}/licenses RENAME LICENSE-libsoxr.txt)
 endif ()
