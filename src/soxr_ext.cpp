@@ -17,7 +17,9 @@ Python-SoXR is a Python wrapper of libsoxr.
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 
-#include "soxr.h"
+#include <soxr.h>
+
+#include "csoxr_version.h"
 
 
 using std::type_info;
@@ -254,9 +256,7 @@ auto cysoxr_oneshot(
 
 
 NB_MODULE(soxr_ext, m) {
-    m.def("add", [](int a, int b) { return a + b; }, "a"_a, "b"_a);
-
-    m.def("version", soxr_version);
+    m.def("libsoxr_version", libsoxr_version);
 
     nb::class_<CySoxr>(m, "CySoxr")
         .def(nb::init<double, double, unsigned, soxr_datatype_t, unsigned long>())

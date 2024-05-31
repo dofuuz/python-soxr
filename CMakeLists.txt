@@ -34,8 +34,24 @@ find_package(Python 3.9
 
 find_package(nanobind CONFIG REQUIRED)
 
+if (USE_SYSTEM_LIBSOXR)
+    set(CSOXR_VER_C src/csoxr_version.cpp)
+else ()
+    # libsoxr VCS versioning
+    set(CSOXR_VER_C ${CMAKE_BINARY_DIR}/csoxr_ver_vcs.cpp)
+    add_custom_target(soxr_version_vcs
+        ${CMAKE_COMMAND}
+            -DVERSION_IN=${CMAKE_CURRENT_SOURCE_DIR}/src/csoxr_ver_vcs.cpp.in
+            -DVERSION_C=${CSOXR_VER_C}
+            -DVCS_REPO_DIR=${CMAKE_CURRENT_SOURCE_DIR}/libsoxr
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/versioning.cmake
+        BYPRODUCTS ${CSOXR_VER_C}
+    )
+endif ()
+
 nanobind_add_module(soxr_ext STABLE_ABI NB_STATIC
     src/soxr_ext.cpp
+    ${CSOXR_VER_C}
 )
 
 target_link_libraries(soxr_ext PRIVATE
@@ -47,7 +63,8 @@ install(TARGETS soxr_ext LIBRARY DESTINATION soxr)
 
 if (NOT USE_SYSTEM_LIBSOXR)
     target_include_directories(soxr_ext PRIVATE
-        libsoxr/src/
+        src
+        libsoxr/src
     )
 
     # find_package(OpenMP)

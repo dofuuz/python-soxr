@@ -16,7 +16,7 @@ from .soxr_ext import QQ, LQ, MQ, HQ, VHQ
 from ._version import version as __version__
 
 
-__libsoxr_version__ = soxr_ext.version()
+__libsoxr_version__ = soxr_ext.libsoxr_version()
 
 # libsoxr locates memory per each channel.
 # Too much channels will cause memory error.
