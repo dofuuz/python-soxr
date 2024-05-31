@@ -45,21 +45,22 @@ static soxr_datatype_t to_soxr_datatype(const type_info& ntype) {
 
 class CySoxr {
     soxr_t _soxr;
-    double _in_rate;
-    double _out_rate;
-    soxr_datatype_t _ntype;
-    unsigned _channels;
-    bool _ended;
+    const double _oi_rate;
 
 public:
-    CySoxr(double in_rate, double out_rate, unsigned num_channels,
-           soxr_datatype_t ntype, unsigned long quality) {
-        _in_rate = in_rate;
-        _out_rate = out_rate;
-        _ntype = ntype;
-        _channels = num_channels;
-        _ended = false;
+    const double _in_rate;
+    const double _out_rate;
+    const soxr_datatype_t _ntype;
+    const unsigned _channels;
+    bool _ended = false;
 
+    CySoxr(double in_rate, double out_rate, unsigned num_channels,
+           soxr_datatype_t ntype, unsigned long quality) :
+            _in_rate(in_rate),
+            _out_rate(out_rate),
+            _oi_rate(out_rate / in_rate),
+            _ntype(ntype),
+            _channels(num_channels) {
         soxr_error_t err = NULL;
         soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
         soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, 0);
@@ -81,9 +82,9 @@ public:
     auto process(
             ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
             bool last=false) {
-        size_t ilen = x.shape(0);
-        size_t olen = 2 * ilen * _out_rate / _in_rate + 1;
-        unsigned channels = x.shape(1);
+        const size_t ilen = x.shape(0);
+        const size_t olen = soxr_delay(_soxr) + ilen * _oi_rate + 1;
+        const unsigned channels = x.shape(1);
 
         if (_ended)
             throw std::runtime_error("Input after last input");
@@ -109,36 +110,22 @@ public:
             throw std::runtime_error(err);
 
         // flush if last input
+        size_t ldone = 0;
         if (last) {
             _ended = true;
-            size_t delay = soxr_delay(_soxr) + .5;
+            err = soxr_process(
+                _soxr,
+                NULL, 0, NULL,
+                &y[odone*channels], olen-odone, &ldone);
 
-            if (0 < delay) {
-                T *last_buf = new T[(odone+delay) * channels] { 0 };
-                std::copy_n(y, odone*channels, last_buf);
-                delete[] y;
-
-                size_t ldone = 0;
-                err = soxr_process(
-                    _soxr,
-                    NULL, 0, NULL,
-                    &last_buf[odone*channels], delay, &ldone);
-
-                if (err != NULL)
-                    throw std::runtime_error(err);
-
-                nb::capsule last_owner(last_buf, [](void *p) noexcept {
-                    delete[] (T *) p;
-                });
-                return ndarray<nb::numpy, T>(
-                    last_buf, { odone+ldone, channels }, last_owner);
-            }
+            if (err != NULL)
+                throw std::runtime_error(err);
         }
         // Delete 'y' when the 'owner' capsule expires
         nb::capsule owner(y, [](void *p) noexcept {
             delete[] (T *) p;
         });
-        return ndarray<nb::numpy, T>(y, { odone, channels }, owner);
+        return ndarray<nb::numpy, T>(y, { odone+ldone, channels }, owner);
     }
 };
 
@@ -148,10 +135,7 @@ auto cysoxr_divide_proc(
         double in_rate, double out_rate,
         ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
         unsigned long quality) {
-    size_t ilen = x.shape(0);
-    size_t olen = ilen * out_rate / in_rate + 1;
-    size_t chunk_len = 48000 * in_rate / out_rate;
-    unsigned channels = x.shape(1);
+    const unsigned channels = x.shape(1);
 
     const soxr_datatype_t ntype = to_soxr_datatype(typeid(T));
 
@@ -167,48 +151,40 @@ auto cysoxr_divide_proc(
     if (err != NULL)
         throw std::runtime_error(err);
 
-    // alloc
-    T *y = new T[olen * channels] { 0 };
-
-    // divide and process
-    size_t odone = 0;
+    T *y = nullptr;
     size_t out_pos = 0;
-    size_t idx = 0;
     {
         nb::gil_scoped_release release;
-        while (idx + chunk_len < ilen) {
-            err = soxr_process(
-                soxr,
-                &x.data()[idx*channels], chunk_len, NULL,
-                &y[out_pos*channels], olen-out_pos, &odone);
-            out_pos += odone;
-            idx += chunk_len;
-        }
 
-        // last chunk
-        if (idx < ilen) {
+        // alloc
+        const size_t ilen = x.shape(0);
+        const size_t olen = ilen * out_rate / in_rate + 1;
+        const size_t chunk_len = 48000 * in_rate / out_rate;
+        y = new T[olen * channels] { 0 };
+
+        // divide and process
+        size_t odone = 0;
+        for (size_t idx = 0; idx < ilen; idx += chunk_len) {
             err = soxr_process(
                 soxr,
-                &x.data()[idx*channels], ilen-idx, NULL,
+                &x.data()[idx*channels], std::min(chunk_len, ilen-idx), NULL,
                 &y[out_pos*channels], olen-out_pos, &odone);
             out_pos += odone;
         }
 
         // flush
-        if (out_pos < olen) {
-            err = soxr_process(
-                soxr,
-                NULL, 0, NULL,
-                &y[out_pos*channels], olen-out_pos, &odone);
-            out_pos += odone;
-        }
+        err = soxr_process(
+            soxr,
+            NULL, 0, NULL,
+            &y[out_pos*channels], olen-out_pos, &odone);
+        out_pos += odone;
+
+        // destruct
+        soxr_delete(soxr);
     }
 
     if (err != NULL)
         throw std::runtime_error(err);
-
-    // destruct
-    soxr_delete(soxr);
 
     // Delete 'y' when the 'owner' capsule expires
     nb::capsule owner(y, [](void *p) noexcept {
@@ -259,6 +235,11 @@ NB_MODULE(soxr_ext, m) {
     m.def("libsoxr_version", libsoxr_version);
 
     nb::class_<CySoxr>(m, "CySoxr")
+        .def_ro("_in_rate", &CySoxr::_in_rate)
+        .def_ro("_out_rate", &CySoxr::_out_rate)
+        .def_ro("_ntype", &CySoxr::_ntype)
+        .def_ro("_channels", &CySoxr::_channels)
+        .def_ro("_ended", &CySoxr::_ended)
         .def(nb::init<double, double, unsigned, soxr_datatype_t, unsigned long>())
         .def("process_float32", &CySoxr::process<float>)
         .def("process_float64", &CySoxr::process<double>)
