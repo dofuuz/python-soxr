@@ -120,7 +120,8 @@ For technical details behind resampler, see libsoxr docs.
 - https://sourceforge.net/p/soxr/code/ci/master/tree/src/soxr.h
 
 Python-SoXR uses [forked version](https://github.com/dofuuz/soxr) of libsoxr. [See difference here](https://github.com/dofuuz/soxr/compare/0.1.3...master).  
-These changes does not apply to dynamic linked builds(e.g. conda-forge build)
+These changes does not apply to dynamic linked builds. (e.g. conda-forge build)  
+To determine the version of libsoxr, use `soxr.__libsoxr_version__`.
 
 
 ## Credit and License
