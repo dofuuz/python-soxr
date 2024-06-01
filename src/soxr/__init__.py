@@ -10,6 +10,7 @@ Python-SoXR is a Python wrapper of libsoxr.
 """
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from . import soxr_ext
 from .soxr_ext import QQ, LQ, MQ, HQ, VHQ
@@ -101,7 +102,7 @@ class ResampleStream:
         self._cysoxr = soxr_ext.CySoxr(in_rate, out_rate, num_channels, stype, q)
         self._process = getattr(self._cysoxr, f'process_{self._type}')
 
-    def resample_chunk(self, x: np.ndarray, last=False):
+    def resample_chunk(self, x: np.ndarray, last=False) -> np.ndarray:
         """ Resample chunk with streaming resampler
 
         Parameters
@@ -111,7 +112,8 @@ class ResampleStream:
             dtype should match with constructor.
 
         last : bool, optional
-            Set True at end of input sequence.
+            Set True at final chunk to flush last outputs.
+            It should be `True` only once at the end of a continuous sequence.
 
         Returns
         -------
@@ -133,8 +135,37 @@ class ResampleStream:
         else:
             raise ValueError('Input must be 1-D or 2-D array')
 
+    def num_clips(self) -> int:
+        """ Clip counter. (for int I/O)
 
-def resample(x, in_rate: float, out_rate: float, quality='HQ'):
+        Returns
+        -------
+        int
+            Count of clipped samples.
+        """
+        return self._cysoxr.num_clips()
+
+    def delay(self) -> float:
+        """ Get current delay.
+
+        SoXR output has an algorithmic delay. This function returns the length of current pending output.
+
+        Returns
+        -------
+        float
+            Current delay in output samples.
+        """
+        return self._cysoxr.delay()
+
+    def clear(self) -> None:
+        """ Reset resampler. Ready for fresh signal, same config.
+
+        This can be used to save initialization time.
+        """
+        self._cysoxr.clear()
+
+
+def resample(x: ArrayLike, in_rate: float, out_rate: float, quality='HQ') -> np.ndarray:
     """ Resample signal
 
     Parameters
@@ -185,7 +216,7 @@ def resample(x, in_rate: float, out_rate: float, quality='HQ'):
         raise ValueError('Input must be 1-D or 2-D array')
 
 
-def _resample_oneshot(x, in_rate: float, out_rate: float, quality='HQ'):
+def _resample_oneshot(x: np.ndarray, in_rate: float, out_rate: float, quality='HQ') -> np.ndarray:
     """
     Resample using libsoxr's `soxr_oneshot()`. Use `resample()` for general use.
     `soxr_oneshot()` becomes slow with long input.

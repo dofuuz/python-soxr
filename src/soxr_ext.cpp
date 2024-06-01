@@ -44,7 +44,7 @@ static soxr_datatype_t to_soxr_datatype(const type_info& ntype) {
 
 
 class CySoxr {
-    soxr_t _soxr;
+    soxr_t _soxr = nullptr;
     const double _oi_rate;
 
 public:
@@ -83,6 +83,9 @@ public:
             ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
             bool last=false) {
         const size_t ilen = x.shape(0);
+
+        // This is slower then allocating fixed `ilen * _oi_rate`.
+        // But it insures lowest output delay provided by libsoxr.
         const size_t olen = soxr_delay(_soxr) + ilen * _oi_rate + 1;
         const unsigned channels = x.shape(1);
 
@@ -126,6 +129,16 @@ public:
             delete[] (T *) p;
         });
         return ndarray<nb::numpy, T>(y, { odone+ldone, channels }, owner);
+    }
+
+    size_t num_clips() { return *soxr_num_clips(_soxr); }
+    double delay() { return soxr_delay(_soxr); }
+    char const * engine() { return soxr_engine(_soxr); }
+
+    void clear() {
+        soxr_error_t err = soxr_clear(_soxr);
+        if (err != NULL) throw std::runtime_error(err);
+        _ended = false;
     }
 };
 
@@ -244,7 +257,11 @@ NB_MODULE(soxr_ext, m) {
         .def("process_float32", &CySoxr::process<float>)
         .def("process_float64", &CySoxr::process<double>)
         .def("process_int32", &CySoxr::process<int32_t>)
-        .def("process_int16", &CySoxr::process<int16_t>);
+        .def("process_int16", &CySoxr::process<int16_t>)
+        .def("num_clips", &CySoxr::num_clips)
+        .def("delay", &CySoxr::delay)
+        .def("engine", &CySoxr::engine)
+        .def("clear", &CySoxr::clear);
 
     m.def("cysoxr_divide_proc_float32", cysoxr_divide_proc<float>);
     m.def("cysoxr_divide_proc_float64", cysoxr_divide_proc<double>);
