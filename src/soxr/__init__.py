@@ -99,8 +99,8 @@ class ResampleStream:
 
         q = _quality_to_enum(quality)
 
-        self._cysoxr = soxr_ext.CySoxr(in_rate, out_rate, num_channels, stype, q)
-        self._process = getattr(self._cysoxr, f'process_{self._type}')
+        self._csoxr = soxr_ext.CSoxr(in_rate, out_rate, num_channels, stype, q)
+        self._process = getattr(self._csoxr, f'process_{self._type}')
 
     def resample_chunk(self, x: np.ndarray, last=False) -> np.ndarray:
         """ Resample chunk with streaming resampler
@@ -143,7 +143,7 @@ class ResampleStream:
         int
             Count of clipped samples.
         """
-        return self._cysoxr.num_clips()
+        return self._csoxr.num_clips()
 
     def delay(self) -> float:
         """ Get current delay.
@@ -155,14 +155,14 @@ class ResampleStream:
         float
             Current delay in output samples.
         """
-        return self._cysoxr.delay()
+        return self._csoxr.delay()
 
     def clear(self) -> None:
         """ Reset resampler. Ready for fresh signal, same config.
 
         This can be used to save initialization time.
         """
-        self._cysoxr.clear()
+        self._csoxr.clear()
 
 
 def resample(x: ArrayLike, in_rate: float, out_rate: float, quality='HQ') -> np.ndarray:
@@ -195,7 +195,7 @@ def resample(x: ArrayLike, in_rate: float, out_rate: float, quality='HQ') -> np.
         x = np.asarray(x, dtype=np.float32)
 
     try:
-        divide_proc = getattr(soxr_ext, f'cysoxr_divide_proc_{x.dtype}')
+        divide_proc = getattr(soxr_ext, f'csoxr_divide_proc_{x.dtype}')
     except AttributeError:
         raise TypeError(_DTYPE_ERR_STR.format(x.dtype))
 
@@ -223,7 +223,7 @@ def _resample_oneshot(x: np.ndarray, in_rate: float, out_rate: float, quality='H
     This function exists for test purpose.
     """
     try:
-        oneshot = getattr(soxr_ext, f'cysoxr_oneshot_{x.dtype}')
+        oneshot = getattr(soxr_ext, f'csoxr_oneshot_{x.dtype}')
     except AttributeError:
         raise TypeError(_DTYPE_ERR_STR.format(x.dtype))
 

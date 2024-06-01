@@ -43,7 +43,7 @@ static soxr_datatype_t to_soxr_datatype(const type_info& ntype) {
 }
 
 
-class CySoxr {
+class CSoxr {
     soxr_t _soxr = nullptr;
     const double _oi_rate;
 
@@ -54,7 +54,7 @@ public:
     const unsigned _channels;
     bool _ended = false;
 
-    CySoxr(double in_rate, double out_rate, unsigned num_channels,
+    CSoxr(double in_rate, double out_rate, unsigned num_channels,
            soxr_datatype_t ntype, unsigned long quality) :
             _in_rate(in_rate),
             _out_rate(out_rate),
@@ -74,7 +74,7 @@ public:
         }
     }
 
-    ~CySoxr() {
+    ~CSoxr() {
         soxr_delete(_soxr);
     }
 
@@ -144,7 +144,7 @@ public:
 
 
 template <typename T>
-auto cysoxr_divide_proc(
+auto csoxr_divide_proc(
         double in_rate, double out_rate,
         ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
         unsigned long quality) {
@@ -208,7 +208,7 @@ auto cysoxr_divide_proc(
 
 
 template <typename T>
-auto cysoxr_oneshot(
+auto csoxr_oneshot(
         double in_rate, double out_rate,
         ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
         unsigned long quality) {
@@ -247,31 +247,31 @@ auto cysoxr_oneshot(
 NB_MODULE(soxr_ext, m) {
     m.def("libsoxr_version", libsoxr_version);
 
-    nb::class_<CySoxr>(m, "CySoxr")
-        .def_ro("in_rate", &CySoxr::_in_rate)
-        .def_ro("out_rate", &CySoxr::_out_rate)
-        .def_ro("ntype", &CySoxr::_ntype)
-        .def_ro("channels", &CySoxr::_channels)
-        .def_ro("ended", &CySoxr::_ended)
+    nb::class_<CSoxr>(m, "CSoxr")
+        .def_ro("in_rate", &CSoxr::_in_rate)
+        .def_ro("out_rate", &CSoxr::_out_rate)
+        .def_ro("ntype", &CSoxr::_ntype)
+        .def_ro("channels", &CSoxr::_channels)
+        .def_ro("ended", &CSoxr::_ended)
         .def(nb::init<double, double, unsigned, soxr_datatype_t, unsigned long>())
-        .def("process_float32", &CySoxr::process<float>)
-        .def("process_float64", &CySoxr::process<double>)
-        .def("process_int32", &CySoxr::process<int32_t>)
-        .def("process_int16", &CySoxr::process<int16_t>)
-        .def("num_clips", &CySoxr::num_clips)
-        .def("delay", &CySoxr::delay)
-        .def("engine", &CySoxr::engine)
-        .def("clear", &CySoxr::clear);
+        .def("process_float32", &CSoxr::process<float>)
+        .def("process_float64", &CSoxr::process<double>)
+        .def("process_int32", &CSoxr::process<int32_t>)
+        .def("process_int16", &CSoxr::process<int16_t>)
+        .def("num_clips", &CSoxr::num_clips)
+        .def("delay", &CSoxr::delay)
+        .def("engine", &CSoxr::engine)
+        .def("clear", &CSoxr::clear);
 
-    m.def("cysoxr_divide_proc_float32", cysoxr_divide_proc<float>);
-    m.def("cysoxr_divide_proc_float64", cysoxr_divide_proc<double>);
-    m.def("cysoxr_divide_proc_int32", cysoxr_divide_proc<int32_t>);
-    m.def("cysoxr_divide_proc_int16", cysoxr_divide_proc<int16_t>);
+    m.def("csoxr_divide_proc_float32", csoxr_divide_proc<float>);
+    m.def("csoxr_divide_proc_float64", csoxr_divide_proc<double>);
+    m.def("csoxr_divide_proc_int32", csoxr_divide_proc<int32_t>);
+    m.def("csoxr_divide_proc_int16", csoxr_divide_proc<int16_t>);
 
-    m.def("cysoxr_oneshot_float32", cysoxr_oneshot<float>);
-    m.def("cysoxr_oneshot_float64", cysoxr_oneshot<double>);
-    m.def("cysoxr_oneshot_int32", cysoxr_oneshot<int32_t>);
-    m.def("cysoxr_oneshot_int16", cysoxr_oneshot<int16_t>);
+    m.def("csoxr_oneshot_float32", csoxr_oneshot<float>);
+    m.def("csoxr_oneshot_float64", csoxr_oneshot<double>);
+    m.def("csoxr_oneshot_int32", csoxr_oneshot<int32_t>);
+    m.def("csoxr_oneshot_int16", csoxr_oneshot<int16_t>);
 
     nb::enum_<soxr_datatype_t>(m, "soxr_datatype_t")
         .value("SOXR_FLOAT32_I", SOXR_FLOAT32_I)

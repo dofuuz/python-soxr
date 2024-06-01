@@ -39,7 +39,7 @@ extensions = [
     'myst_parser',
 ]
 
-autodoc_mock_imports = ['soxr.cysoxr', 'soxr.version', 'numpy']
+autodoc_mock_imports = ['soxr.soxr_ext', 'soxr.version', 'numpy']
 myst_enable_extensions  = ['linkify']
 
 # Add any paths that contain templates here, relative to this directory.
