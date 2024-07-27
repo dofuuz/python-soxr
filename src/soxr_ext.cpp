@@ -82,11 +82,6 @@ public:
     auto process(
             ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
             bool last=false) {
-        const size_t ilen = x.shape(0);
-
-        // This is slower then allocating fixed `ilen * _oi_rate`.
-        // But it insures lowest output delay provided by libsoxr.
-        const size_t olen = soxr_delay(_soxr) + ilen * _oi_rate + 1;
         const unsigned channels = x.shape(1);
 
         if (_ended)
@@ -100,35 +95,52 @@ public:
         if (ntype != _ntype)
             throw nb::type_error("Data type mismatch");
 
-        T *y = new T[olen * channels] { 0 };
+        T *y = nullptr;
 
         soxr_error_t err = NULL;
-        size_t odone = 0;
-        err = soxr_process(
-            _soxr,
-            x.data(), ilen, NULL,
-            y, olen, &odone);
+        size_t out_pos = 0;
+        {
+            nb::gil_scoped_release release;
+
+            const size_t ilen = x.shape(0);
+
+            // This is slower then allocating fixed `ilen * _oi_rate`.
+            // But it insures lowest output delay provided by libsoxr.
+            const size_t olen = soxr_delay(_soxr) + ilen * _oi_rate + 1;
+            const size_t chunk_len = 48000 * _in_rate / _out_rate;
+
+            // alloc
+            y = new T[olen * channels] { 0 };
+
+            // divide and process
+            size_t odone = 0;
+            for (size_t idx = 0; idx < ilen; idx += chunk_len) {
+                err = soxr_process(
+                    _soxr,
+                    &x.data()[idx*channels], std::min(chunk_len, ilen-idx), NULL,
+                    &y[out_pos*channels], olen-out_pos, &odone);
+                out_pos += odone;
+            }
+
+            // flush if last input
+            if (last) {
+                _ended = true;
+                err = soxr_process(
+                    _soxr,
+                    NULL, 0, NULL,
+                    &y[out_pos*channels], olen-out_pos, &odone);
+                out_pos += odone;
+            }
+        }
 
         if (err != NULL)
             throw std::runtime_error(err);
 
-        // flush if last input
-        size_t ldone = 0;
-        if (last) {
-            _ended = true;
-            err = soxr_process(
-                _soxr,
-                NULL, 0, NULL,
-                &y[odone*channels], olen-odone, &ldone);
-
-            if (err != NULL)
-                throw std::runtime_error(err);
-        }
         // Delete 'y' when the 'owner' capsule expires
         nb::capsule owner(y, [](void *p) noexcept {
             delete[] (T *) p;
         });
-        return ndarray<nb::numpy, T>(y, { odone+ldone, channels }, owner);
+        return ndarray<nb::numpy, T>(y, { out_pos, channels }, owner);
     }
 
     size_t num_clips() { return *soxr_num_clips(_soxr); }
@@ -201,7 +213,7 @@ auto csoxr_divide_proc(
 
     // Delete 'y' when the 'owner' capsule expires
     nb::capsule owner(y, [](void *p) noexcept {
-       delete[] (T *) p;
+        delete[] (T *) p;
     });
     return ndarray<nb::numpy, T>(y, { out_pos, channels }, owner);
 }
