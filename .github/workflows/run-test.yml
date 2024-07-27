@@ -27,8 +27,9 @@ jobs:
         echo "MACOS_DEPLOYMENT_TARGET=10.14" >> $GITHUB_ENV
 
     - name: Build and install
-      run: python -m pip install pytest
-           pip install --verbose .
+      run: |
+        python -m pip install pytest
+        pip install --verbose .
 
     - name: Test with pytest
       run: |
