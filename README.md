@@ -83,8 +83,6 @@ Output frame count may not be consistent. This is normal operation.
 
 x86 and ARM processors are supported.
 
-Neon extension is required for ARM CPUs. Without Neon, it may crash or return inaccurate result.
-
 
 ## Benchmark
 

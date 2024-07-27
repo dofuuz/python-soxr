@@ -30,7 +30,7 @@ def test_dtype(dtype):
     assert x.dtype == y.dtype
 
 
-@pytest.mark.xfail(raises=TypeError, strict=True)
+@pytest.mark.xfail(raises=(TypeError, ValueError), strict=True)
 @pytest.mark.parametrize('dtype', [np.complex64, np.complex128, np.int8, np.int64])
 def test_bad_dtype(dtype):
     x = np.zeros(100, dtype=dtype)
