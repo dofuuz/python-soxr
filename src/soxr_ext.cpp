@@ -26,6 +26,8 @@ using std::type_info;
 
 namespace nb = nanobind;
 using namespace nb::literals;
+using nb::call_guard;
+using nb::gil_scoped_release;
 using nb::ndarray;
 
 
@@ -82,11 +84,6 @@ public:
     auto process(
             ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
             bool last=false) {
-        const size_t ilen = x.shape(0);
-
-        // This is slower then allocating fixed `ilen * _oi_rate`.
-        // But it insures lowest output delay provided by libsoxr.
-        const size_t olen = soxr_delay(_soxr) + ilen * _oi_rate + 1;
         const unsigned channels = x.shape(1);
 
         if (_ended)
@@ -100,35 +97,46 @@ public:
         if (ntype != _ntype)
             throw nb::type_error("Data type mismatch");
 
+        soxr_error_t err = NULL;
+        size_t out_pos = 0;
+
+        // alloc
+        const size_t ilen = x.shape(0);
+
+        // This is slower then allocating fixed `ilen * _oi_rate`.
+        // But it insures lowest output delay provided by libsoxr.
+        const size_t olen = soxr_delay(_soxr) + ilen * _oi_rate + 1;
+        const size_t chunk_len = 48000 * _in_rate / _out_rate;
         T *y = new T[olen * channels] { 0 };
 
-        soxr_error_t err = NULL;
+        // divide and process
         size_t odone = 0;
-        err = soxr_process(
-            _soxr,
-            x.data(), ilen, NULL,
-            y, olen, &odone);
-
-        if (err != NULL)
-            throw std::runtime_error(err);
+        for (size_t idx = 0; idx < ilen; idx += chunk_len) {
+            err = soxr_process(
+                _soxr,
+                &x.data()[idx*channels], std::min(chunk_len, ilen-idx), NULL,
+                &y[out_pos*channels], olen-out_pos, &odone);
+            out_pos += odone;
+        }
 
         // flush if last input
-        size_t ldone = 0;
         if (last) {
             _ended = true;
             err = soxr_process(
                 _soxr,
                 NULL, 0, NULL,
-                &y[odone*channels], olen-odone, &ldone);
-
-            if (err != NULL)
-                throw std::runtime_error(err);
+                &y[out_pos*channels], olen-out_pos, &odone);
+            out_pos += odone;
         }
+
+        if (err != NULL)
+            throw std::runtime_error(err);
+
         // Delete 'y' when the 'owner' capsule expires
         nb::capsule owner(y, [](void *p) noexcept {
             delete[] (T *) p;
         });
-        return ndarray<nb::numpy, T>(y, { odone+ldone, channels }, owner);
+        return ndarray<nb::numpy, T>(y, { out_pos, channels }, owner);
     }
 
     size_t num_clips() { return *soxr_num_clips(_soxr); }
@@ -164,44 +172,40 @@ auto csoxr_divide_proc(
     if (err != NULL)
         throw std::runtime_error(err);
 
-    T *y = nullptr;
     size_t out_pos = 0;
-    {
-        nb::gil_scoped_release release;
 
-        // alloc
-        const size_t ilen = x.shape(0);
-        const size_t olen = ilen * out_rate / in_rate + 1;
-        const size_t chunk_len = 48000 * in_rate / out_rate;
-        y = new T[olen * channels] { 0 };
+    // alloc
+    const size_t ilen = x.shape(0);
+    const size_t olen = ilen * out_rate / in_rate + 1;
+    const size_t chunk_len = 48000 * in_rate / out_rate;
+    T *y = new T[olen * channels] { 0 };
 
-        // divide and process
-        size_t odone = 0;
-        for (size_t idx = 0; idx < ilen; idx += chunk_len) {
-            err = soxr_process(
-                soxr,
-                &x.data()[idx*channels], std::min(chunk_len, ilen-idx), NULL,
-                &y[out_pos*channels], olen-out_pos, &odone);
-            out_pos += odone;
-        }
-
-        // flush
+    // divide and process
+    size_t odone = 0;
+    for (size_t idx = 0; idx < ilen; idx += chunk_len) {
         err = soxr_process(
             soxr,
-            NULL, 0, NULL,
+            &x.data()[idx*channels], std::min(chunk_len, ilen-idx), NULL,
             &y[out_pos*channels], olen-out_pos, &odone);
         out_pos += odone;
-
-        // destruct
-        soxr_delete(soxr);
     }
+
+    // flush
+    err = soxr_process(
+        soxr,
+        NULL, 0, NULL,
+        &y[out_pos*channels], olen-out_pos, &odone);
+    out_pos += odone;
+
+    // destruct
+    soxr_delete(soxr);
 
     if (err != NULL)
         throw std::runtime_error(err);
 
     // Delete 'y' when the 'owner' capsule expires
     nb::capsule owner(y, [](void *p) noexcept {
-       delete[] (T *) p;
+        delete[] (T *) p;
     });
     return ndarray<nb::numpy, T>(y, { out_pos, channels }, owner);
 }
@@ -254,24 +258,24 @@ NB_MODULE(soxr_ext, m) {
         .def_ro("channels", &CSoxr::_channels)
         .def_ro("ended", &CSoxr::_ended)
         .def(nb::init<double, double, unsigned, soxr_datatype_t, unsigned long>())
-        .def("process_float32", &CSoxr::process<float>)
-        .def("process_float64", &CSoxr::process<double>)
-        .def("process_int32", &CSoxr::process<int32_t>)
-        .def("process_int16", &CSoxr::process<int16_t>)
+        .def("process_float32", &CSoxr::process<float>, call_guard<gil_scoped_release>())
+        .def("process_float64", &CSoxr::process<double>, call_guard<gil_scoped_release>())
+        .def("process_int32", &CSoxr::process<int32_t>, call_guard<gil_scoped_release>())
+        .def("process_int16", &CSoxr::process<int16_t>, call_guard<gil_scoped_release>())
         .def("num_clips", &CSoxr::num_clips)
         .def("delay", &CSoxr::delay)
         .def("engine", &CSoxr::engine)
         .def("clear", &CSoxr::clear);
 
-    m.def("csoxr_divide_proc_float32", csoxr_divide_proc<float>);
-    m.def("csoxr_divide_proc_float64", csoxr_divide_proc<double>);
-    m.def("csoxr_divide_proc_int32", csoxr_divide_proc<int32_t>);
-    m.def("csoxr_divide_proc_int16", csoxr_divide_proc<int16_t>);
+    m.def("csoxr_divide_proc_float32", csoxr_divide_proc<float>, call_guard<gil_scoped_release>());
+    m.def("csoxr_divide_proc_float64", csoxr_divide_proc<double>, call_guard<gil_scoped_release>());
+    m.def("csoxr_divide_proc_int32", csoxr_divide_proc<int32_t>, call_guard<gil_scoped_release>());
+    m.def("csoxr_divide_proc_int16", csoxr_divide_proc<int16_t>, call_guard<gil_scoped_release>());
 
-    m.def("csoxr_oneshot_float32", csoxr_oneshot<float>);
-    m.def("csoxr_oneshot_float64", csoxr_oneshot<double>);
-    m.def("csoxr_oneshot_int32", csoxr_oneshot<int32_t>);
-    m.def("csoxr_oneshot_int16", csoxr_oneshot<int16_t>);
+    m.def("csoxr_oneshot_float32", csoxr_oneshot<float>, call_guard<gil_scoped_release>());
+    m.def("csoxr_oneshot_float64", csoxr_oneshot<double>, call_guard<gil_scoped_release>());
+    m.def("csoxr_oneshot_int32", csoxr_oneshot<int32_t>, call_guard<gil_scoped_release>());
+    m.def("csoxr_oneshot_int16", csoxr_oneshot<int16_t>, call_guard<gil_scoped_release>());
 
     nb::enum_<soxr_datatype_t>(m, "soxr_datatype_t")
         .value("SOXR_FLOAT32_I", SOXR_FLOAT32_I)
