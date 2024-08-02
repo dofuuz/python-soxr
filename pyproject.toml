@@ -72,7 +72,7 @@ build-verbosity = 1
 
 # Run pytest to ensure that the package was correctly built
 test-command = "pytest {project}/tests"
-test-requires = "pytest"
+test-extras = ["test"]
 
 # Needed for full C++17 support
 [tool.cibuildwheel.macos.environment]
