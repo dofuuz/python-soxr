@@ -133,8 +133,10 @@ public:
             }
         }
 
-        if (err != NULL)
+        if (err) {
+            delete[] y;
             throw std::runtime_error(err);
+        }
 
         // Delete 'y' when the 'owner' capsule expires
         nb::capsule owner(y, [](void *p) noexcept {
@@ -162,24 +164,24 @@ auto csoxr_divide_proc(
         unsigned long quality) {
     const unsigned channels = x.shape(1);
 
-    const soxr_datatype_t ntype = to_soxr_datatype(typeid(T));
-
-    // init soxr
     soxr_error_t err = NULL;
-    const soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
-    const soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, 0);
-
-    soxr_t soxr = soxr_create(
-        in_rate, out_rate, channels,
-        &err, &io_spec, &quality_spec, NULL);
-
-    if (err != NULL)
-        throw std::runtime_error(err);
 
     T *y = nullptr;
     size_t out_pos = 0;
-    {
+    do {
         nb::gil_scoped_release release;
+
+        const soxr_datatype_t ntype = to_soxr_datatype(typeid(T));
+
+        // init soxr
+        const soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
+        const soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, 0);
+
+        soxr_t soxr = soxr_create(
+            in_rate, out_rate, channels,
+            &err, &io_spec, &quality_spec, NULL);
+
+        if (err) break;
 
         // alloc
         const size_t ilen = x.shape(0);
@@ -206,10 +208,12 @@ auto csoxr_divide_proc(
 
         // destruct
         soxr_delete(soxr);
-    }
+    } while (false);
 
-    if (err != NULL)
+    if (err) {
+        delete[] y;
         throw std::runtime_error(err);
+    }
 
     // Delete 'y' when the 'owner' capsule expires
     nb::capsule owner(y, [](void *p) noexcept {
@@ -236,15 +240,21 @@ auto csoxr_oneshot(
     const soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, 0);
 
     size_t odone = 0;
-    T *y = new T[olen * channels] { 0 };
+    T *y = nullptr;
+    {
+        nb::gil_scoped_release release;
 
-    err = soxr_oneshot(
-        in_rate, out_rate, channels,
-        x.data(), ilen, NULL,
-        y, olen, &odone,
-        &io_spec, &quality_spec, NULL);
+        y = new T[olen * channels] { 0 };
 
-    if (err != NULL) {
+        err = soxr_oneshot(
+            in_rate, out_rate, channels,
+            x.data(), ilen, NULL,
+            y, olen, &odone,
+            &io_spec, &quality_spec, NULL);
+    }
+
+    if (err) {
+        delete[] y;
         throw std::runtime_error(err);
     }
 
