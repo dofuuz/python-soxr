@@ -86,11 +86,6 @@ if (NOT USE_SYSTEM_LIBSOXR)
         libsoxr/src
     )
 
-    # find_package(OpenMP)
-    # if (OpenMP_FOUND)
-    #     target_link_libraries(soxr_ext PRIVATE OpenMP::OpenMP_CXX)
-    # endif ()
-
     # Build static libsoxr
     option(BUILD_TESTS "" OFF)
     option(WITH_OPENMP "" OFF)
@@ -99,7 +94,6 @@ if (NOT USE_SYSTEM_LIBSOXR)
     option(WITH_VR32 "" OFF)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     set(CMAKE_INSTALL_PREFIX ../install)
-    set(CMAKE_POLICY_DEFAULT_CMP0115 OLD)  # suppress policy warnings
     add_subdirectory(libsoxr libsoxr)
 
     # Copy licenses to package (scikit-build-core)
