@@ -37,7 +37,7 @@ Note: Conda packge name is `soxr-python`, not python-soxr.
 import soxr
 
 y = soxr.resample(
-    x,          # 1D(mono) or 2D(frames, channels) array input
+    x,          # input array – mono(1D) or multi-channel(2D of [frame, channel])
     48000,      # input samplerate
     16000       # target samplerate
 )
@@ -68,7 +68,7 @@ while not eof:
     ...
 
     y_chunk = rs.resample_chunk(
-        x,              # 1D(mono) or 2D(frames, channels) array input
+        x,              # input aray – mono(1D) or multi-channel(2D of [frame, channel])
         last=eof        # Set True at end of input
     )
 ```
@@ -114,7 +114,7 @@ samplerate (sinc_best)   | 397
 
 For technical details behind resampler, see libsoxr docs.
 - https://sourceforge.net/p/soxr/wiki/Home/
-- http://sox.sourceforge.net/SoX/Resampling
+- http://sox.sourceforge.net/SoX/Resampling ([archive](https://web.archive.org/web/20230626144127/https://sox.sourceforge.net/SoX/Resampling))
 - https://sourceforge.net/p/soxr/code/ci/master/tree/src/soxr.h
 
 Python-SoXR uses [forked version](https://github.com/dofuuz/soxr) of libsoxr. [See difference here](https://github.com/dofuuz/soxr/compare/0.1.3...master).  

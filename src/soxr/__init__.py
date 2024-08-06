@@ -106,7 +106,7 @@ class ResampleStream:
         Parameters
         ----------
         x : np.ndarray
-            Input array. Input can be 1D(mono) or 2D(frames, channels).
+            Input array. Input can be mono(1D) or multi-channel(2D of [frame, channel]).
             dtype should match with constructor.
 
         last : bool, optional
@@ -169,7 +169,7 @@ def resample(x: ArrayLike, in_rate: float, out_rate: float, quality='HQ') -> np.
     Parameters
     ----------
     x : array_like
-        Input array. Input can be 1D(mono) or 2D(frames, channels).
+        Input array. Input can be mono(1D) or multi-channel(2D of [frame, channel]).
         If input is not `np.ndarray`, it will be converted to `np.ndarray(dtype='float32')`.
         Its dtype should be one of float32, float64, int16, int32.
     in_rate : float
@@ -224,6 +224,8 @@ def _resample_oneshot(x: np.ndarray, in_rate: float, out_rate: float, quality='H
         oneshot = getattr(soxr_ext, f'csoxr_oneshot_{x.dtype}')
     except AttributeError:
         raise TypeError(_DTYPE_ERR_STR.format(x.dtype))
+
+    x = np.ascontiguousarray(x)    # make array C-contiguous
 
     if x.ndim == 1:
         y = oneshot(in_rate, out_rate, x[:, np.newaxis], _quality_to_enum(quality))
