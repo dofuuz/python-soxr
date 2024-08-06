@@ -33,7 +33,7 @@ instfreq = np.exp(np.linspace(np.log(offset+100), np.log(offset+23900), LEN))-of
 deltaphase = 2*np.pi*instfreq/P
 cphase = np.cumsum(deltaphase)
 sig = np.sin(cphase)
-sig = np.asarray([sig, sig, sig, sig], dtype=np.float64).T
+sig = np.stack([sig, sig, sig, sig], axis=-1, dtype=np.float64)
 print(f'{sig.shape = }')
 
 

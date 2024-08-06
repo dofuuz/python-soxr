@@ -16,7 +16,8 @@ import soxr
 fs = 44100
 ch1 = np.sin(np.linspace(0, fs, 150 * 44100))
 ch2 = np.cos(np.linspace(0, fs, 150 * 44100))
-data = np.hstack([ch1, ch2])
+data = np.stack([ch1, ch2], axis=-1)
+print(data.shape)
 
 
 def resample():

@@ -29,7 +29,7 @@ instfreq = np.exp(np.linspace(np.log(offset+100), np.log(offset+23900), 96000*5)
 deltaphase = 2*np.pi*instfreq/P
 cphase = np.cumsum(deltaphase)
 sig = np.sin(cphase)
-sig = np.asarray([sig, sig, sig, sig], dtype=np.float64).T
+sig = np.stack([sig, sig, sig, sig], axis=-1, dtype=np.float64)
 
 
 out_lens = []
@@ -51,3 +51,4 @@ for length in range(4800, len(sig), 4800):
 
 plt.plot(out_lens, time_oneshot)
 plt.plot(out_lens, time_divide)
+plt.show()
