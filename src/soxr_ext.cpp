@@ -52,15 +52,17 @@ public:
     const double _out_rate;
     const soxr_datatype_t _ntype;
     const unsigned _channels;
+    const size_t _div_len;
     bool _ended = false;
 
     CSoxr(double in_rate, double out_rate, unsigned num_channels,
-           soxr_datatype_t ntype, unsigned long quality) :
+          soxr_datatype_t ntype, unsigned long quality) :
             _in_rate(in_rate),
             _out_rate(out_rate),
             _oi_rate(out_rate / in_rate),
             _ntype(ntype),
-            _channels(num_channels) {
+            _channels(num_channels),
+            _div_len(std::max(1000., 48000 * _in_rate / _out_rate)) {
         soxr_error_t err = NULL;
         soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
         soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, 0);
@@ -107,17 +109,16 @@ public:
             // This is slower then allocating fixed `ilen * _oi_rate`.
             // But it insures lowest output delay provided by libsoxr.
             const size_t olen = soxr_delay(_soxr) + ilen * _oi_rate + 1;
-            const size_t chunk_len = 48000 * _in_rate / _out_rate;
 
             // alloc
             y = new T[olen * channels] { 0 };
 
-            // divide and process
+            // divide long input and process
             size_t odone = 0;
-            for (size_t idx = 0; idx < ilen; idx += chunk_len) {
+            for (size_t idx = 0; idx < ilen; idx += _div_len) {
                 err = soxr_process(
                     _soxr,
-                    &x.data()[idx*channels], std::min(chunk_len, ilen-idx), NULL,
+                    &x.data()[idx*channels], std::min(_div_len, ilen-idx), NULL,
                     &y[out_pos*channels], olen-out_pos, &odone);
                 out_pos += odone;
             }
@@ -157,6 +158,8 @@ public:
 };
 
 
+// soxr_oneshot() becomes much slower when input is long.
+// To avoid this, divide long input and process.
 template <typename T>
 auto csoxr_divide_proc(
         double in_rate, double out_rate,
@@ -186,15 +189,15 @@ auto csoxr_divide_proc(
         // alloc
         const size_t ilen = x.shape(0);
         const size_t olen = ilen * out_rate / in_rate + 1;
-        const size_t chunk_len = 48000 * in_rate / out_rate;
+        const size_t div_len = std::max(1000., 48000 * in_rate / out_rate);
         y = new T[olen * channels] { 0 };
 
-        // divide and process
+        // divide long input and process
         size_t odone = 0;
-        for (size_t idx = 0; idx < ilen; idx += chunk_len) {
+        for (size_t idx = 0; idx < ilen; idx += div_len) {
             err = soxr_process(
                 soxr,
-                &x.data()[idx*channels], std::min(chunk_len, ilen-idx), NULL,
+                &x.data()[idx*channels], std::min(div_len, ilen-idx), NULL,
                 &y[out_pos*channels], olen-out_pos, &odone);
             out_pos += odone;
         }
