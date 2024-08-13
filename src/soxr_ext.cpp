@@ -12,6 +12,7 @@ Python-SoXR is a Python wrapper of libsoxr.
 #include <stdint.h>
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <typeinfo>
 
 #include <nanobind/nanobind.h>
@@ -23,6 +24,7 @@ Python-SoXR is a Python wrapper of libsoxr.
 
 
 using std::type_info;
+using std::make_unique;
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -38,6 +40,19 @@ static soxr_datatype_t to_soxr_datatype(const type_info& ntype) {
         return SOXR_INT32_I;
     else if (ntype == typeid(int16_t))
         return SOXR_INT16_I;
+    else
+        throw nb::type_error("Data type not support");
+}
+
+static soxr_datatype_t to_soxr_datatype_split(const type_info& ntype) {
+    if (ntype == typeid(float))
+        return SOXR_FLOAT32_S;
+    else if (ntype == typeid(double))
+        return SOXR_FLOAT64_S;
+    else if (ntype == typeid(int32_t))
+        return SOXR_INT32_S;
+    else if (ntype == typeid(int16_t))
+        return SOXR_INT16_S;
     else
         throw nb::type_error("Data type not support");
 }
@@ -227,6 +242,65 @@ auto csoxr_divide_proc(
 
 
 template <typename T>
+auto csoxr_split_ch(
+        double in_rate, double out_rate,
+        ndarray<const T, nb::ndim<2>, nb::device::cpu> x,
+        unsigned long quality) {
+    if (in_rate <= 0 || out_rate <= 0)
+        throw std::invalid_argument("Sample rate should be over 0");
+
+    const size_t ilen = x.shape(0);
+    const size_t olen = ilen * out_rate / in_rate + 1;
+    const unsigned channels = x.shape(1);
+
+    if (x.stride(0) != 1)
+        throw std::invalid_argument("Data not continuos");
+
+    soxr_error_t err = NULL;
+
+    size_t odone = 0;
+    T *y = nullptr;
+    {
+        nb::gil_scoped_release release;
+
+        const soxr_datatype_t ntype = to_soxr_datatype_split(typeid(T));
+
+        // make soxr config
+        const soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
+        const soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, 0);
+        const auto st = x.stride(1);
+
+        y = new T[olen * channels] { 0 };
+
+        // get pointers to each channels
+        auto ibuf_ptrs = make_unique<const T*[]>(channels);
+        auto obuf_ptrs = make_unique<T*[]>(channels);
+        for (size_t i = 0; i < channels; ++i) {
+            ibuf_ptrs[i] = &x.data()[st * i];
+            obuf_ptrs[i] = &y[olen * i];
+        }
+
+        err = soxr_oneshot(
+            in_rate, out_rate, channels,
+            ibuf_ptrs.get(), ilen, NULL,
+            obuf_ptrs.get(), olen, &odone,
+            &io_spec, &quality_spec, NULL);
+    }
+
+    if (err) {
+        delete[] y;
+        throw std::runtime_error(err);
+    }
+
+    // Delete 'y' when the 'owner' capsule expires
+    nb::capsule owner(y, [](void *p) noexcept {
+       delete[] (T *) p;
+    });
+    return ndarray<nb::numpy, T>(y, { odone, channels }, owner, { (int64_t)1, (int64_t)olen });
+}
+
+
+template <typename T>
 auto csoxr_oneshot(
         double in_rate, double out_rate,
         ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
@@ -292,6 +366,11 @@ NB_MODULE(soxr_ext, m) {
     m.def("csoxr_divide_proc_float64", csoxr_divide_proc<double>);
     m.def("csoxr_divide_proc_int32", csoxr_divide_proc<int32_t>);
     m.def("csoxr_divide_proc_int16", csoxr_divide_proc<int16_t>);
+
+    m.def("csoxr_split_ch_float32", csoxr_split_ch<float>);
+    m.def("csoxr_split_ch_float64", csoxr_split_ch<double>);
+    m.def("csoxr_split_ch_int32", csoxr_split_ch<int32_t>);
+    m.def("csoxr_split_ch_int16", csoxr_split_ch<int16_t>);
 
     m.def("csoxr_oneshot_float32", csoxr_oneshot<float>);
     m.def("csoxr_oneshot_float64", csoxr_oneshot<double>);

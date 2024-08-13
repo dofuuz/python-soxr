@@ -214,6 +214,34 @@ def resample(x: ArrayLike, in_rate: float, out_rate: float, quality='HQ') -> np.
         raise ValueError('Input must be 1-D or 2-D array')
 
 
+def _resample_split_ch(x: ArrayLike, in_rate: float, out_rate: float, quality='HQ') -> np.ndarray:
+    """
+    Resample data with splited channel memory.
+    It has a little speed adventage when data is in Fortran order.
+    """
+    if type(x) != np.ndarray:
+        x = np.asarray(x, dtype=np.float32)
+
+    try:
+        divide_proc = getattr(soxr_ext, f'csoxr_split_ch_{x.dtype}')
+    except AttributeError:
+        raise TypeError(_DTYPE_ERR_STR.format(x.dtype))
+
+    q = _quality_to_enum(quality)
+
+    if x.ndim == 1:
+        y = divide_proc(in_rate, out_rate, x[:, np.newaxis], q)
+        return np.squeeze(y, axis=1)
+    elif x.ndim == 2:
+        num_channels = x.shape[1]
+        if num_channels < 1 or _CH_LIMIT < num_channels:
+            raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
+
+        return divide_proc(in_rate, out_rate, x, q)
+    else:
+        raise ValueError('Input must be 1-D or 2-D array')
+
+
 def _resample_oneshot(x: np.ndarray, in_rate: float, out_rate: float, quality='HQ') -> np.ndarray:
     """
     Resample using libsoxr's `soxr_oneshot()`. Use `resample()` for general use.
