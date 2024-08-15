@@ -12,7 +12,7 @@ This script demonstrates it.
 soxr.resample() divides input automatically to retain speed.
 """
 
-import time
+import timeit
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,27 +28,31 @@ offset = 2000
 instfreq = np.exp(np.linspace(np.log(offset+100), np.log(offset+23900), 96000*5))-offset
 deltaphase = 2*np.pi*instfreq/P
 cphase = np.cumsum(deltaphase)
-sig = np.sin(cphase)
-sig = np.stack([sig, sig, sig, sig], axis=-1, dtype=np.float64)
+sig1 = np.sin(cphase)
+sig2 = np.cos(cphase)
+sig_i = np.stack([sig1, sig2, sig1, sig2], axis=-1, dtype=np.float64)  # C memory order (interleaved)
+sig_s = np.asarray([sig1, sig2, sig1, sig2], dtype=np.float64).T  # Fortran memory order (channel splited)
 
 
-out_lens = []
+in_lens = range(4800, len(sig1), 4800)
 time_divide = []
 time_oneshot = []
-for length in range(4800, len(sig), 4800):
+time_split = []
+for length in in_lens:
     # soxr resample
-    start_time = time.perf_counter()
-    y_resample = soxr.resample(sig[:length], P, Q)
-    time_proc = time.perf_counter() - start_time
+    time_proc = timeit.timeit(lambda: soxr.resample(sig_i[:length], P, Q), number=2)
     time_divide.append(time_proc)
 
-    # soxr oneshot
-    start_time = time.perf_counter()
-    y_oneshot = soxr._resample_oneshot(sig[:length], P, Q)
-    time_proc = time.perf_counter() - start_time
-    time_oneshot.append(time_proc)
-    out_lens.append(len(y_oneshot))
+    # soxr resample w/ split channel I/O
+    time_proc = timeit.timeit(lambda: soxr.resample(sig_s[:length], P, Q), number=2)
+    time_split.append(time_proc)
 
-plt.plot(out_lens, time_oneshot)
-plt.plot(out_lens, time_divide)
+    # soxr oneshot
+    time_proc = timeit.timeit(lambda: soxr._resample_oneshot(sig_i[:length], P, Q), number=2)
+    time_oneshot.append(time_proc)
+
+plt.plot(in_lens, time_divide, label='divide')
+plt.plot(in_lens, time_split, label='split ch')
+plt.plot(in_lens, time_oneshot, label='oneshot')
+plt.legend()
 plt.show()

@@ -40,23 +40,27 @@ def test_bad_dtype(dtype):
 @pytest.mark.parametrize('in_rate, out_rate', [(44100, 32000), (32000, 44100)])
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
 def test_divide_match(in_rate, out_rate, dtype):
-    x = np.random.randn(49999).astype(dtype)
+    x = np.random.randn(25999,2).astype(dtype)
 
     y_oneshot = soxr._resample_oneshot(x, in_rate, out_rate)
     y_divide = soxr.resample(x, in_rate, out_rate)
+    y_split = soxr.resample(np.asfortranarray(x), in_rate, out_rate)
 
     assert np.allclose(y_oneshot, y_divide)
+    assert np.allclose(y_oneshot, y_split)
 
 
 @pytest.mark.parametrize('in_rate, out_rate', [(44100, 32000), (32000, 44100)])
 @pytest.mark.parametrize('length', [0, 1, 2, 99, 100, 101, 31999, 32000, 32001, 34828, 34829, 34830, 44099, 44100, 44101, 47999, 48000, 48001, 66149, 66150, 266151])
 def test_length_match(in_rate, out_rate, length):
-    x = np.random.randn(length).astype(np.float32)
+    x = np.random.randn(266151, 2).astype(np.float32)
 
-    y_oneshot = soxr._resample_oneshot(x, in_rate, out_rate)
-    y_divide = soxr.resample(x, in_rate, out_rate)
+    y_oneshot = soxr._resample_oneshot(x[:length], in_rate, out_rate)
+    y_divide = soxr.resample(x[:length], in_rate, out_rate)
+    y_split = soxr.resample(np.asfortranarray(x)[:length], in_rate, out_rate)
 
     assert np.allclose(y_oneshot, y_divide)
+    assert np.allclose(y_oneshot, y_split)
 
 
 @pytest.mark.parametrize('channels', [1, 2, 3, 5, 7, 97, 197])
@@ -65,8 +69,10 @@ def test_channel_match(channels):
 
     y_oneshot = soxr._resample_oneshot(x, 44100, 32000)
     y_divide = soxr.resample(x, 44100, 32000)
+    y_split = soxr.resample(np.asfortranarray(x), 44100, 32000)
 
     assert np.allclose(y_oneshot, y_divide)
+    assert np.allclose(y_oneshot, y_split)
 
 
 @pytest.mark.parametrize('in_rate, out_rate', [(44100, 32000), (32000, 44100)])
@@ -135,8 +141,10 @@ def test_quality_sine(in_rate, out_rate, quality):
     y = make_tone(FREQ, out_rate, DURATION)
 
     y_pred = soxr.resample(x, in_rate, out_rate, quality=quality)
+    y_split = soxr.resample(np.asfortranarray(x), in_rate, out_rate, quality=quality)
 
     assert np.allclose(y[IG:-IG], y_pred[IG:-IG], atol=1e-4)
+    assert np.allclose(y[IG:-IG], y_split[IG:-IG], atol=1e-4)
 
 
 @pytest.mark.parametrize('in_rate,out_rate', [(48000, 24000), (32000, 44100)])
@@ -150,5 +158,7 @@ def test_int_sine(in_rate, out_rate, dtype):
     y = (make_tone(FREQ, out_rate, DURATION) * 16384).astype(dtype)
 
     y_pred = soxr.resample(x, in_rate, out_rate)
+    y_split = soxr.resample(np.asfortranarray(x), in_rate, out_rate)
 
     assert np.allclose(y[IG:-IG], y_pred[IG:-IG], atol=2)
+    assert np.allclose(y[IG:-IG], y_split[IG:-IG], atol=2)

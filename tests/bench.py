@@ -47,6 +47,12 @@ t = timeit.timeit(lambda: soxr.resample(sig, P, Q, quality=QUALITY), number=REPE
 print(f'soxr resample: {t:f} (sec)')
 
 
+# soxr split ch I/O:
+sig_s = np.asfortranarray(sig)
+t = timeit.timeit(lambda: soxr.resample(sig_s, P, Q, quality=QUALITY), number=REPEAT)
+print(f'soxr split ch I/O: {t:f} (sec)')
+
+
 # soxr with clear()
 # It becomes faster then soxr.resample() when input length (=LEN) is short
 rs = soxr.ResampleStream(P, Q, sig.shape[1], dtype=sig.dtype, quality=QUALITY)

@@ -254,8 +254,8 @@ auto csoxr_split_ch(
     const size_t olen = ilen * out_rate / in_rate + 1;
     const unsigned channels = x.shape(1);
 
-    if (x.stride(0) != 1)
-        throw std::invalid_argument("Data not continuos");
+    if (ilen != 0 && x.stride(0) != 1)
+        throw std::invalid_argument("Data not contiguous");
 
     soxr_error_t err = NULL;
 
