@@ -44,7 +44,7 @@ static soxr_datatype_t to_soxr_datatype(const type_info& ntype) {
         throw nb::type_error("Data type not support");
 }
 
-static soxr_datatype_t to_soxr_datatype_split(const type_info& ntype) {
+static soxr_datatype_t to_soxr_split_dtype(const type_info& ntype) {
     if (ntype == typeid(float))
         return SOXR_FLOAT32_S;
     else if (ntype == typeid(double))
@@ -241,6 +241,7 @@ auto csoxr_divide_proc(
 }
 
 
+// split channel memory I/O (e.g. Fortran order)
 template <typename T>
 auto csoxr_split_ch(
         double in_rate, double out_rate,
@@ -258,34 +259,60 @@ auto csoxr_split_ch(
 
     soxr_error_t err = NULL;
 
-    size_t odone = 0;
     T *y = nullptr;
-    {
+    size_t out_pos = 0;
+    do {
         nb::gil_scoped_release release;
 
-        const soxr_datatype_t ntype = to_soxr_datatype_split(typeid(T));
+        const soxr_datatype_t ntype = to_soxr_split_dtype(typeid(T));
 
-        // make soxr config
+        // init soxr
         const soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
         const soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, 0);
-        const auto st = x.stride(1);
 
+        soxr_t soxr = soxr_create(
+            in_rate, out_rate, channels,
+            &err, &io_spec, &quality_spec, NULL);
+
+        if (err) break;
+
+        // alloc
+        const size_t div_len = std::max(1000., 48000 * in_rate / out_rate);
         y = new T[olen * channels] { 0 };
 
-        // get pointers to each channels
+        const int64_t st = x.stride(1);
         auto ibuf_ptrs = make_unique<const T*[]>(channels);
         auto obuf_ptrs = make_unique<T*[]>(channels);
-        for (size_t i = 0; i < channels; ++i) {
-            ibuf_ptrs[i] = &x.data()[st * i];
-            obuf_ptrs[i] = &y[olen * i];
+
+        // divide long input and process
+        size_t odone = 0;
+        for (size_t idx = 0; idx < ilen; idx += div_len) {
+            // get pointers to each channel i/o
+            for (size_t ch = 0; ch < channels; ++ch) {
+                ibuf_ptrs[ch] = &x.data()[st * ch + idx];
+                obuf_ptrs[ch] = &y[olen * ch + out_pos];
+            }
+
+            err = soxr_process(
+                soxr,
+                ibuf_ptrs.get(), std::min(div_len, ilen-idx), NULL,
+                obuf_ptrs.get(), olen-out_pos, &odone);
+            out_pos += odone;
         }
 
-        err = soxr_oneshot(
-            in_rate, out_rate, channels,
-            ibuf_ptrs.get(), ilen, NULL,
-            obuf_ptrs.get(), olen, &odone,
-            &io_spec, &quality_spec, NULL);
-    }
+        // flush
+        for (size_t ch = 0; ch < channels; ++ch) {
+            obuf_ptrs[ch] = &y[olen * ch + out_pos];
+        }
+        err = soxr_process(
+            soxr,
+            NULL, 0, NULL,
+            obuf_ptrs.get(), olen-out_pos, &odone);
+        out_pos += odone;
+
+        // destruct
+        soxr_delete(soxr);
+    } while (false);
 
     if (err) {
         delete[] y;
@@ -296,7 +323,7 @@ auto csoxr_split_ch(
     nb::capsule owner(y, [](void *p) noexcept {
        delete[] (T *) p;
     });
-    return ndarray<nb::numpy, T>(y, { odone, channels }, owner, { (int64_t)1, (int64_t)olen });
+    return ndarray<nb::numpy, T>(y, { out_pos, channels }, owner, { (int64_t)1, (int64_t)olen });
 }
 
 
