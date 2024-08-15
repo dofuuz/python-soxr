@@ -127,7 +127,9 @@ def test_stream_length(in_rate, out_rate, chunk_size, length):
 
 
 def make_tone(freq, sr, duration):
-    return np.sin(2 * np.pi * freq / sr * np.arange(int(sr * duration)))
+    length = int(sr * duration)
+    sig = np.sin(2 * np.pi * freq / sr * np.arange(length))
+    return sig * np.hanning(length)
 
 
 @pytest.mark.parametrize('in_rate,out_rate', [(44100, 22050), (22050, 32000)])
@@ -135,7 +137,6 @@ def make_tone(freq, sr, duration):
 def test_quality_sine(in_rate, out_rate, quality):
     FREQ = 32.0
     DURATION = 2.0
-    IG = 50  # ignore popping at start/end
 
     x = make_tone(FREQ, in_rate, DURATION)
     y = make_tone(FREQ, out_rate, DURATION)
@@ -143,8 +144,8 @@ def test_quality_sine(in_rate, out_rate, quality):
     y_pred = soxr.resample(x, in_rate, out_rate, quality=quality)
     y_split = soxr.resample(np.asfortranarray(x), in_rate, out_rate, quality=quality)
 
-    assert np.allclose(y[IG:-IG], y_pred[IG:-IG], atol=1e-4)
-    assert np.allclose(y[IG:-IG], y_split[IG:-IG], atol=1e-4)
+    assert np.allclose(y, y_pred, atol=1e-4)
+    assert np.allclose(y, y_split, atol=1e-4)
 
 
 @pytest.mark.parametrize('in_rate,out_rate', [(48000, 24000), (32000, 44100)])
@@ -152,7 +153,6 @@ def test_quality_sine(in_rate, out_rate, quality):
 def test_int_sine(in_rate, out_rate, dtype):
     FREQ = 32.0
     DURATION = 2.0
-    IG = 50  # ignore popping at start/end
 
     x = (make_tone(FREQ, in_rate, DURATION) * 16384).astype(dtype)
     y = (make_tone(FREQ, out_rate, DURATION) * 16384).astype(dtype)
@@ -160,5 +160,5 @@ def test_int_sine(in_rate, out_rate, dtype):
     y_pred = soxr.resample(x, in_rate, out_rate)
     y_split = soxr.resample(np.asfortranarray(x), in_rate, out_rate)
 
-    assert np.allclose(y[IG:-IG], y_pred[IG:-IG], atol=2)
-    assert np.allclose(y[IG:-IG], y_split[IG:-IG], atol=2)
+    assert np.allclose(y, y_pred, atol=2)
+    assert np.allclose(y, y_split, atol=2)

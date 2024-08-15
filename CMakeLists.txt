@@ -88,7 +88,7 @@ if (NOT USE_SYSTEM_LIBSOXR)
 
     # Build static libsoxr
     option(BUILD_TESTS "" OFF)
-    option(WITH_OPENMP "" OFF)
+    option(WITH_OPENMP "" OFF)  # OpenMP seems not working (dunno why). Disable it for portability anyway.
     option(WITH_LSR_BINDINGS "" OFF)
     option(BUILD_SHARED_LIBS "" OFF)  # make it shared someday?
     option(WITH_VR32 "" OFF)
