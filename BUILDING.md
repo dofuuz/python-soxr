@@ -18,11 +18,9 @@ pip wheel -v .
 ```
 
 ### (Alternative method) Build using system libsoxr
-libsoxr should be installed before building.  
-(e.g. `sudo apt install libsoxr-dev`)
+libsoxr should be installed before building. (e.g. `sudo apt install libsoxr-dev`)
 ```
-export CMAKE_ARGS="-DUSE_SYSTEM_LIBSOXR=ON"
-pip wheel -v .
+pip wheel -v . --config-settings=cmake.define.USE_SYSTEM_LIBSOXR=ON
 ```
 It will link libsoxr dynamically and won't bundle libsoxr in the wheel package.
 
