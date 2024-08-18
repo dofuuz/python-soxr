@@ -79,16 +79,11 @@ Output frame count may not be consistent. This is normal operation.
 📝 [More code examples](https://dofuuz.github.io/dsp/2024/05/26/sample-rate-conversion-in-python.html)
 
 
-## Requirement
-
-x86 and ARM processors are supported.
-
-
 ## Benchmark
 
-Sweep, impulse, speed compairsion with other Python resamplers.
+Sweep, impulse, speed compairsion with other resamplers for Python.
 
-https://colab.research.google.com/drive/1XgSOvWlRIau1FYwQG_yRSAhDK3KB8bEL?usp=sharing
+https://colab.research.google.com/drive/1_xYUs00VWYOAXShB85W1MFWaUjGHfO4K?usp=sharing
 
 
 ### Speed comparison summary
@@ -98,16 +93,16 @@ Ran on Google Colab.
 
 Library                  | Time on CPU (ms)
 ------------------------ | ----------------
-soxr (HQ)                | 7.2
-scipy.signal.resample    | 13.4
-soxr (VHQ)               | 15.8
-torchaudio               | 19.2
-lilfilter                | 21.4
-julius                   | 23.1
-resampy (kaiser_fast)    | 62.6
-samplerate (sinc_medium) | 92.5
-resampy (kaiser_best)    | 256
-samplerate (sinc_best)   | 397
+soxr (HQ)                | 10.8
+torchaudio               | 13.8
+soxr (VHQ)               | 14.5
+scipy.signal.resample    | 21.3
+lilfilter                | 24.7
+julius                   | 31
+resampy (kaiser_fast)    | 108
+samplerate (sinc_medium) | 223
+resampy (kaiser_best)    | 310
+samplerate (sinc_best)   | 794
 
 
 ## Technical detail
@@ -117,9 +112,9 @@ For technical details behind resampler, see libsoxr docs.
 - http://sox.sourceforge.net/SoX/Resampling ([archive](https://web.archive.org/web/20230626144127/https://sox.sourceforge.net/SoX/Resampling))
 - https://sourceforge.net/p/soxr/code/ci/master/tree/src/soxr.h
 
-Python-SoXR uses [forked version](https://github.com/dofuuz/soxr) of libsoxr. [See difference here](https://github.com/dofuuz/soxr/compare/0.1.3...master).  
+Python-SoXR uses [modified version](https://github.com/dofuuz/soxr) of libsoxr. [See changes here](https://github.com/dofuuz/soxr/compare/0.1.3...master).  
 These changes does not apply to dynamic linked builds. (e.g. conda-forge build)  
-To determine the version of libsoxr, use `soxr.__libsoxr_version__`.
+To check the version of libsoxr, use `soxr.__libsoxr_version__`.
 
 
 ## Credit and License

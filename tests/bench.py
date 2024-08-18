@@ -26,6 +26,7 @@ CHUNK_SIZE = int(P * 0.01)
 
 print(f'{soxr.__version__ = }')
 print(f'{soxr.__libsoxr_version__ = }')
+print(f'{QUALITY = }')
 
 # generate signal
 offset = 2000
