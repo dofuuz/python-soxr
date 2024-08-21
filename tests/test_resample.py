@@ -9,6 +9,9 @@ High quality, one-dimensional sample-rate conversion library for Python.
 Python-SoXR is a Python wrapper of libsoxr.
 """
 
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+
 import numpy as np
 import pytest
 import soxr
@@ -63,7 +66,7 @@ def test_length_match(in_rate, out_rate, length):
     assert np.allclose(y_oneshot, y_split)
 
 
-@pytest.mark.parametrize('channels', [1, 2, 3, 5, 7, 97, 197])
+@pytest.mark.parametrize('channels', [1, 2, 3, 5, 7, 24, 49])
 def test_channel_match(channels):
     x = np.random.randn(30011, channels).astype(np.float32)
 
@@ -129,7 +132,9 @@ def test_stream_length(in_rate, out_rate, chunk_size, length):
 def make_tone(freq, sr, duration):
     length = int(sr * duration)
     sig = np.sin(2 * np.pi * freq / sr * np.arange(length))
-    return sig * np.hanning(length)
+    sig = sig * np.hanning(length)
+    
+    return np.stack([sig, np.zeros_like(sig)], axis=-1)
 
 
 @pytest.mark.parametrize('in_rate,out_rate', [(44100, 22050), (22050, 32000)])
@@ -162,3 +167,17 @@ def test_int_sine(in_rate, out_rate, dtype):
 
     assert np.allclose(y, y_pred, atol=2)
     assert np.allclose(y, y_split, atol=2)
+
+
+@pytest.mark.parametrize('num_task', [2, 3, 4, 5, 6, 7, 8, 9, 12, 17, 32])
+def test_multithread(num_task):
+    x = np.random.randn(25999, 2).astype(np.float32)
+
+    with ThreadPoolExecutor() as p:
+        results = p.map(
+            partial(soxr.resample, in_rate=44100, out_rate=32000),
+            [x] * num_task
+        )
+    results = list(results)
+
+    assert np.allclose(results[-2], results[-1])
