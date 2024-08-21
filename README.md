@@ -112,8 +112,8 @@ For technical details behind resampler, see libsoxr docs.
 - http://sox.sourceforge.net/SoX/Resampling ([archive](https://web.archive.org/web/20230626144127/https://sox.sourceforge.net/SoX/Resampling))
 - https://sourceforge.net/p/soxr/code/ci/master/tree/src/soxr.h
 
-Python-SoXR uses [modified version](https://github.com/dofuuz/soxr) of libsoxr. [See changes here](https://github.com/dofuuz/soxr/compare/0.1.3...master).  
-These changes does not apply to dynamic linked builds. (e.g. conda-forge build)  
+Python-SoXR package comes with [modified version](https://github.com/dofuuz/soxr) of libsoxr. [See changes here](https://github.com/dofuuz/soxr/compare/0.1.3...master).  
+These changes do not apply to dynamic-linked builds (e.g. conda-forge build).  
 To check the version of libsoxr, use `soxr.__libsoxr_version__`.
 
 
