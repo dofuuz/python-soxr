@@ -65,22 +65,35 @@ nanobind_add_module(soxr_ext STABLE_ABI NB_STATIC
     ${CSOXR_VER_C}
 )
 
-nanobind_add_stub(soxr_ext_stub
-    MODULE soxr_ext
-    OUTPUT soxr_ext.pyi
-    PYTHON_PATH $<TARGET_FILE_DIR:soxr_ext>
-    DEPENDS soxr_ext
-)
+if (NOT CMAKE_CROSSCOMPILING)
+    # nanobind's stub generation requires importing the module, so skip it when cross-compiling
+    nanobind_add_stub(soxr_ext_stub
+        MODULE soxr_ext
+        OUTPUT soxr_ext.pyi
+        PYTHON_PATH $<TARGET_FILE_DIR:soxr_ext>
+        DEPENDS soxr_ext
+    )
 
-target_link_libraries(soxr_ext PRIVATE
-    soxr
-)
+    install(FILES ${CMAKE_BINARY_DIR}/soxr_ext.pyi DESTINATION soxr)
+endif ()
 
 # Install directive for scikit-build-core
 install(TARGETS soxr_ext LIBRARY DESTINATION soxr)
-install(FILES ${CMAKE_BINARY_DIR}/soxr_ext.pyi DESTINATION soxr)
 
-if (NOT USE_SYSTEM_LIBSOXR)
+if (USE_SYSTEM_LIBSOXR)
+    # Find system libsoxr
+    find_library(SOXR_LIBRARY NAMES soxr)
+    find_path(SOXR_INCLUDE_DIR soxr.h)
+
+    message (STATUS "Building with external libsoxr")
+    message(SOXR_LIBRARY="${SOXR_LIBRARY}")
+    message(SOXR_INCLUDE_DIR="${SOXR_INCLUDE_DIR}")
+
+    target_link_libraries(soxr_ext PRIVATE ${SOXR_LIBRARY})
+    target_include_directories(soxr_ext PRIVATE ${SOXR_INCLUDE_DIR})
+
+else ()
+    target_link_libraries(soxr_ext PRIVATE soxr)
     target_include_directories(soxr_ext PRIVATE
         src
         libsoxr/src
