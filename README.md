@@ -15,7 +15,7 @@ Python-SoXR is a Python wrapper of [libsoxr](https://sourceforge.net/projects/so
 
 ## Installation
 
-```
+```sh
 pip install soxr
 ```
 
@@ -24,7 +24,7 @@ If installation fails, upgrade pip with `python -m pip install --upgrade pip` an
 
 ### in Conda environment
 
-```
+```sh
 conda install -c conda-forge soxr-python
 ```
 
