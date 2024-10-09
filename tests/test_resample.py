@@ -20,12 +20,14 @@ import soxr
 @pytest.mark.xfail(raises=ValueError, strict=True)
 @pytest.mark.parametrize('in_rate, out_rate', [(100, 0), (100, -1), (0, 100), (-1, 100)])
 def test_bad_sr(in_rate, out_rate):
+    # test invalid samplerate
     x = np.zeros(100)
     soxr.resample(x, in_rate, out_rate)
 
 
 @pytest.mark.parametrize('dtype', [np.float32, np.float64, np.int16, np.int32])
 def test_dtype(dtype):
+    # test dtype i/o
     x = np.random.randn(100).astype(dtype)
 
     y = soxr.resample(x, 100, 200)
@@ -36,6 +38,7 @@ def test_dtype(dtype):
 @pytest.mark.xfail(raises=(TypeError, ValueError), strict=True)
 @pytest.mark.parametrize('dtype', [np.complex64, np.complex128, np.int8, np.int64])
 def test_bad_dtype(dtype):
+    # test invalid dtype
     x = np.zeros(100, dtype=dtype)
     soxr.resample(x, 100, 200)
 
@@ -43,6 +46,7 @@ def test_bad_dtype(dtype):
 @pytest.mark.parametrize('in_rate, out_rate', [(44100, 32000), (32000, 44100)])
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
 def test_divide_match(in_rate, out_rate, dtype):
+    # test resample()
     x = np.random.randn(25999,2).astype(dtype)
 
     y_oneshot = soxr._resample_oneshot(x, in_rate, out_rate)
@@ -56,6 +60,7 @@ def test_divide_match(in_rate, out_rate, dtype):
 @pytest.mark.parametrize('in_rate, out_rate', [(44100, 32000), (32000, 44100)])
 @pytest.mark.parametrize('length', [0, 1, 2, 99, 100, 101, 31999, 32000, 32001, 34828, 34829, 34830, 44099, 44100, 44101, 47999, 48000, 48001, 66149, 66150, 266151])
 def test_length_match(in_rate, out_rate, length):
+    # test sliced array with various length
     x = np.random.randn(266151, 2).astype(np.float32)
 
     y_oneshot = soxr._resample_oneshot(x[:length], in_rate, out_rate)
@@ -68,11 +73,12 @@ def test_length_match(in_rate, out_rate, length):
 
 @pytest.mark.parametrize('channels', [1, 2, 3, 5, 7, 24, 49])
 def test_channel_match(channels):
-    x = np.random.randn(30011, channels).astype(np.float32)
+    # test sliced array with various channel number
+    x = np.random.randn(30011, 49).astype(np.float32)
 
-    y_oneshot = soxr._resample_oneshot(x, 44100, 32000)
-    y_divide = soxr.resample(x, 44100, 32000)
-    y_split = soxr.resample(np.asfortranarray(x), 44100, 32000)
+    y_oneshot = soxr._resample_oneshot(x[:, :channels], 44100, 32000)
+    y_divide = soxr.resample(x[:, :channels], 44100, 32000)
+    y_split = soxr.resample(np.asfortranarray(x)[:, :channels], 44100, 32000)
 
     assert np.allclose(y_oneshot, y_divide)
     assert np.allclose(y_oneshot, y_split)
@@ -82,6 +88,7 @@ def test_channel_match(channels):
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
 @pytest.mark.parametrize('channels', [1, 2])
 def test_stream_match(in_rate, out_rate, dtype, channels):
+    # test resample_chunk()
     CHUNK_SIZE = 509
     x = np.random.randn(49999, channels).astype(dtype)
 
@@ -108,6 +115,7 @@ def test_stream_match(in_rate, out_rate, dtype, channels):
 @pytest.mark.parametrize('chunk_size', [7, 50, 101, 44100])
 @pytest.mark.parametrize('length', [0, 1, 100, 101, 31999, 32000, 44100, 44101, 266151])
 def test_stream_length(in_rate, out_rate, chunk_size, length):
+    # test resample_chunk() with various length and chunk size
     x = np.random.randn(length, 1).astype(np.float32)
 
     y_oneshot = soxr._resample_oneshot(x, in_rate, out_rate)
@@ -130,6 +138,7 @@ def test_stream_length(in_rate, out_rate, chunk_size, length):
 
 
 def make_tone(freq, sr, duration):
+    # make reference tone
     length = int(sr * duration)
     sig = np.sin(2 * np.pi * freq / sr * np.arange(length))
     sig = sig * np.hanning(length)
@@ -140,6 +149,7 @@ def make_tone(freq, sr, duration):
 @pytest.mark.parametrize('in_rate,out_rate', [(44100, 22050), (22050, 32000)])
 @pytest.mark.parametrize('quality', ['VHQ', 'HQ', 'MQ', 'LQ', 'QQ'])
 def test_quality_sine(in_rate, out_rate, quality):
+    # compare result with reference
     FREQ = 32.0
     DURATION = 2.0
 
@@ -156,6 +166,7 @@ def test_quality_sine(in_rate, out_rate, quality):
 @pytest.mark.parametrize('in_rate,out_rate', [(48000, 24000), (32000, 44100)])
 @pytest.mark.parametrize('dtype', [np.int32, np.int16])
 def test_int_sine(in_rate, out_rate, dtype):
+    # compare result with reference (int I/O)
     FREQ = 32.0
     DURATION = 2.0
 
@@ -171,6 +182,7 @@ def test_int_sine(in_rate, out_rate, dtype):
 
 @pytest.mark.parametrize('num_task', [2, 3, 4, 5, 6, 7, 8, 9, 12, 17, 32])
 def test_multithread(num_task):
+    # test multi-thread operation
     x = np.random.randn(25999, 2).astype(np.float32)
 
     with ThreadPoolExecutor() as p:
