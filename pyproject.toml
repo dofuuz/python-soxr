@@ -1,10 +1,14 @@
 [build-system]
 requires = [
-    "scikit-build-core >=0.9.0",
+    "scikit-build-core >=0.10",
     "nanobind >=2",
-    "setuptools>=45",
-    "setuptools_scm[toml]>=6.2",
+
+    "setuptools >=45",
+    "setuptools_scm[toml] >=6.2",
+
     "typing-extensions; python_version < '3.11'",
+
+    # No, it doesn't require NumPy on build-time.
 ]
 build-backend = "scikit_build_core.build"
 
@@ -54,7 +58,7 @@ Source = "https://github.com/dofuuz/python-soxr"
 
 [tool.scikit-build]
 # Protect the configuration against future changes in scikit-build-core
-minimum-version = "0.9"
+minimum-version = "build-system.requires"
 
 # Setuptools-style build caching in a local directory
 build-dir = "build/{wheel_tag}"
