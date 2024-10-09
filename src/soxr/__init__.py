@@ -123,8 +123,6 @@ class ResampleStream:
         if type(x) != np.ndarray or x.dtype != self._type:
             raise TypeError(_DTYPE_UNMATCH_ERR_STR.format(self._type))
 
-        x = np.ascontiguousarray(x)    # make array C-contiguous
-
         if x.ndim == 1:
             y = self._process(x[:, np.newaxis], last)
             return np.squeeze(y, axis=1)
@@ -225,8 +223,6 @@ def _resample_oneshot(x: np.ndarray, in_rate: float, out_rate: float, quality='H
         oneshot = getattr(soxr_ext, f'csoxr_oneshot_{x.dtype}')
     except AttributeError:
         raise TypeError(_DTYPE_ERR_STR.format(x.dtype))
-
-    x = np.ascontiguousarray(x)    # make array C-contiguous
 
     if x.ndim == 1:
         y = oneshot(in_rate, out_rate, x[:, np.newaxis], _quality_to_enum(quality))
