@@ -26,27 +26,23 @@ _CH_EXEED_ERR_STR = 'Channel num({}) out of limit. Should be in [1, %d]' % _CH_L
 _DTYPE_ERR_STR = 'Data type must be one of [float32, float64, int16, int32], not {}'
 _QUALITY_ERR_STR = "Quality must be one of [QQ, LQ, MQ, HQ, VHQ]"
 
+_QUALITY_ENUM_DICT = {
+    VHQ: VHQ, 'vhq': VHQ, 'soxr_vhq': VHQ,
+    HQ: HQ, 'hq': HQ, 'soxr_hq': HQ,
+    MQ: MQ, 'mq': MQ, 'soxr_mq': MQ,
+    LQ: LQ, 'lq': LQ, 'soxr_lq': LQ,
+    QQ: QQ, 'qq': QQ, 'soxr_qq': QQ,
+}
+
 
 def _quality_to_enum(q):
-    if q in (VHQ, HQ, MQ, LQ, QQ):
-        return q
+    if isinstance(q, str):
+        q = q.lower()
 
-    if type(q) is int:
+    try:
+        return _QUALITY_ENUM_DICT[q]
+    except (KeyError, TypeError):
         raise ValueError(_QUALITY_ERR_STR)
-
-    q = q.lower()
-    if q in ('vhq', 'soxr_vhq'):
-        return VHQ
-    elif q in ('hq', 'soxr_hq'):
-        return HQ
-    elif q in ('mq', 'soxr_mq'):
-        return MQ
-    elif q in ('lq', 'soxr_lq'):
-        return LQ
-    elif q in ('qq', 'soxr_qq'):
-        return QQ
-
-    raise ValueError(_QUALITY_ERR_STR)
 
 
 def _to_soxr_datatype(ntype):
