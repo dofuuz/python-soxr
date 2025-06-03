@@ -53,8 +53,8 @@ def test_divide_match(in_rate, out_rate, dtype):
     y_divide = soxr.resample(x, in_rate, out_rate)
     y_split = soxr.resample(np.asfortranarray(x), in_rate, out_rate)
 
-    assert np.allclose(y_oneshot, y_divide)
-    assert np.allclose(y_oneshot, y_split)
+    assert np.all(y_oneshot == y_divide)
+    assert np.all(y_oneshot == y_split)
 
 
 @pytest.mark.parametrize('in_rate, out_rate', [(44100, 32000), (32000, 44100)])
@@ -67,8 +67,8 @@ def test_length_match(in_rate, out_rate, length):
     y_divide = soxr.resample(x[:length], in_rate, out_rate)
     y_split = soxr.resample(np.asfortranarray(x)[:length], in_rate, out_rate)
 
-    assert np.allclose(y_oneshot, y_divide)
-    assert np.allclose(y_oneshot, y_split)
+    assert np.all(y_oneshot == y_divide)
+    assert np.all(y_oneshot == y_split)
 
 
 @pytest.mark.parametrize('channels', [1, 2, 3, 5, 7, 24, 49])
@@ -80,8 +80,8 @@ def test_channel_match(channels):
     y_divide = soxr.resample(x[:, :channels], 44100, 32000)
     y_split = soxr.resample(np.asfortranarray(x)[:, :channels], 44100, 32000)
 
-    assert np.allclose(y_oneshot, y_divide)
-    assert np.allclose(y_oneshot, y_split)
+    assert np.all(y_oneshot == y_divide)
+    assert np.all(y_oneshot == y_split)
 
 
 def stream_resample(x, in_rate, out_rate, chunk_size, dtype):
@@ -113,7 +113,7 @@ def test_stream_length(in_rate, out_rate, chunk_size, length, dtype):
     y_oneshot = soxr._resample_oneshot(x, in_rate, out_rate)
     y_stream = stream_resample(x, in_rate, out_rate, chunk_size, dtype)
 
-    assert np.allclose(y_oneshot, y_stream)
+    assert np.all(y_oneshot == y_stream)
 
 
 @pytest.mark.parametrize('in_rate, out_rate', [(48000, 22050), (8000, 48000)])
@@ -177,9 +177,10 @@ def test_int_sine(in_rate, out_rate, dtype):
 
 
 @pytest.mark.parametrize('num_task', [2, 3, 4, 5, 6, 7, 8, 9, 12, 17, 32])
-def test_multithread(num_task):
+@pytest.mark.parametrize('dtype', ['float32', np.int16])
+def test_multithread(num_task, dtype):
     # test multi-thread operation
-    x = np.random.randn(25999, 2).astype(np.float32)
+    x = (np.random.randn(25999, 2) * 5000).astype(dtype)
 
     with ThreadPoolExecutor() as p:
         results = p.map(
@@ -188,4 +189,4 @@ def test_multithread(num_task):
         )
     results = list(results)
 
-    assert np.allclose(results[-2], results[-1])
+    assert np.all(results[-2] == results[-1])

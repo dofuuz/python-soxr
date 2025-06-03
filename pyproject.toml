@@ -43,6 +43,7 @@ classifiers = [
     "Programming Language :: C",
     "Programming Language :: C++",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: Free Threading :: 1 - Unstable",
 ]
 dependencies = ["numpy"]
 
