@@ -180,7 +180,7 @@ def test_int_sine(in_rate, out_rate, dtype):
 @pytest.mark.parametrize('dtype', ['float32', np.int16])
 def test_multithread(num_task, dtype):
     # test multi-thread operation
-    x = (np.random.randn(25999, 2) * 5000).astype(dtype)
+    x = (np.random.randn(75999, 2) * 5000).astype(dtype)
 
     with ThreadPoolExecutor() as p:
         results = p.map(
