@@ -60,7 +60,7 @@ else ()
     )
 endif ()
 
-nanobind_add_module(soxr_ext STABLE_ABI NB_STATIC
+nanobind_add_module(soxr_ext STABLE_ABI FREE_THREADED NB_STATIC
     src/soxr_ext.cpp
     ${CSOXR_VER_C}
 )
