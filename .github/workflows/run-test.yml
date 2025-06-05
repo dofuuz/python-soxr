@@ -35,3 +35,20 @@ jobs:
       run: |
         cd tests
         python -m pytest
+
+  build_external:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build with external libosxr and install
+      run: |
+        sudo apt install -y libsoxr-dev
+        pip install pytest
+        pip install --verbose . -C cmake.define.USE_SYSTEM_LIBSOXR=ON
+
+    - name: Test with pytest
+      run: |
+        cd tests
+        python -m pytest

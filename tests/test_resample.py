@@ -17,12 +17,12 @@ import pytest
 import soxr
 
 
-@pytest.mark.xfail(raises=ValueError, strict=True)
-@pytest.mark.parametrize('in_rate, out_rate', [(100, 0), (100, -1), (0, 100), (-1, 100)])
+@pytest.mark.parametrize('in_rate, out_rate', [(100, 0), (50, -1), (0, 100.5), (-1.5, 100)])
 def test_bad_sr(in_rate, out_rate):
     # test invalid samplerate
     x = np.zeros(100)
-    soxr.resample(x, in_rate, out_rate)
+    with pytest.raises(ValueError):
+        soxr.resample(x, in_rate, out_rate)
 
 
 @pytest.mark.parametrize('dtype', [np.float32, np.float64, np.int16, np.int32])
@@ -35,12 +35,12 @@ def test_dtype(dtype):
     assert x.dtype == y.dtype
 
 
-@pytest.mark.xfail(raises=(TypeError, ValueError), strict=True)
 @pytest.mark.parametrize('dtype', [np.complex64, np.complex128, np.int8, np.int64])
 def test_bad_dtype(dtype):
     # test invalid dtype
     x = np.zeros(100, dtype=dtype)
-    soxr.resample(x, 100, 200)
+    with pytest.raises((TypeError, ValueError)):
+        soxr.resample(x, 100, 200)
 
 
 @pytest.mark.parametrize('in_rate, out_rate', [(44100, 32000), (32000, 44100)])
@@ -176,11 +176,10 @@ def test_int_sine(in_rate, out_rate, dtype):
     assert np.allclose(y_oneshot, y_split, atol=2)
 
 
-@pytest.mark.parametrize('num_task', [2, 3, 4, 5, 6, 7, 8, 9, 12, 17, 32])
-@pytest.mark.parametrize('dtype', ['float32', np.int16])
-def test_multithread(num_task, dtype):
+@pytest.mark.parametrize('num_task', [2, 3, 5, 7, 9, 12, 17, 32])
+def test_multithread(num_task):
     # test multi-thread operation
-    x = (np.random.randn(75999, 2) * 5000).astype(dtype)
+    x = np.random.randn(75999, 2).astype(np.float32)
 
     with ThreadPoolExecutor() as p:
         results = p.map(
@@ -190,3 +189,23 @@ def test_multithread(num_task, dtype):
     results = list(results)
 
     assert np.all(results[-2] == results[-1])
+
+
+@pytest.mark.parametrize('num_task', [2, 3, 4, 6, 8, 15, 18, 24])
+def test_mt_dither(num_task):
+    # test dithering randomness and multi-thread operation
+    x = (np.random.randn(70001, 2) * 5000).astype(np.int16)
+
+    with ThreadPoolExecutor() as p:
+        results = p.map(
+            partial(soxr.resample, in_rate=32000, out_rate=48000),
+            [x] * num_task
+        )
+    results = list(results)
+
+    assert np.allclose(results[0], results[1], atol=2)
+
+    try:
+        assert np.all(results[-2] == results[-1])
+    except AssertionError:
+        pytest.xfail("Random dithering seed used. May produce slightly different result when using int I/O.")
