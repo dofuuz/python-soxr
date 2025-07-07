@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         # macos-13 is an intel runner, macos-14 is apple silicon
-        os: [ubuntu-22.04, ubuntu-22.04-arm, windows-2022, macos-13, macos-14]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2022, macos-13, macos-14]
 
     steps:
       - uses: actions/checkout@v4
@@ -27,11 +27,11 @@ jobs:
           submodules: true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23
+        uses: pypa/cibuildwheel@v3.0
         env:
           CIBW_ENABLE: cpython-freethreading
           # Skip builds(save time / avoid build error)
-          CIBW_SKIP: "pp* *-musllinux_* *_i686 *-win32"
+          CIBW_SKIP: "*-musllinux_* *-win32"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -40,7 +40,7 @@ jobs:
 
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
