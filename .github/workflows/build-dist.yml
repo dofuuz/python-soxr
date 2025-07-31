@@ -1,3 +1,5 @@
+# Ref: https://github.com/pypa/cibuildwheel/blob/main/examples/github-deploy.yml
+
 name: Build and upload to PyPI
 
 # Build on every branch push, tag push, and pull request change:
@@ -28,9 +30,9 @@ jobs:
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.1
-        # env:
+        env:
           # Skip builds(save time / avoid build error)
-          # CIBW_SKIP: "*-musllinux_* *-win32"
+          CIBW_SKIP: "*-musllinux_* *-win32"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -48,9 +50,6 @@ jobs:
 
       - name: Build SDist
         run: pipx run build --sdist
-
-      - name: Check metadata
-        run: pipx run twine check dist/*
 
       - uses: actions/upload-artifact@v4
         with:

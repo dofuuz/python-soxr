@@ -1,3 +1,5 @@
+# Ref: https://github.com/wjakob/nanobind_example/blob/master/.github/workflows/pip.yml
+
 name: Run tests
 
 on: [push, pull_request, workflow_dispatch]
@@ -7,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.12", "3.14-rc", "3.14t-rc", "pypy3.11"]
+        python-version: ["3.9", "3.12", "3.14-dev", "3.14t-dev", "pypy3.11"]
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
 
