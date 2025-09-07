@@ -21,6 +21,7 @@ requires-python = ">=3.9"
 authors = [
     { name = "KEUM Myungchul" },
 ]
+license = "LGPL-2.1-or-later"
 keywords = [
     "audio resampling",
     "samplerate conversion",
@@ -29,7 +30,7 @@ keywords = [
     "resampler",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
 
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
@@ -38,12 +39,10 @@ classifiers = [
     "Topic :: Multimedia :: Sound/Audio :: Conversion",
     "Topic :: Scientific/Engineering",
 
-    "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
-
     "Programming Language :: C",
     "Programming Language :: C++",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: Free Threading :: 1 - Unstable",
+    "Programming Language :: Python :: Free Threading :: 2 - Beta",
 ]
 dependencies = ["numpy"]
 
