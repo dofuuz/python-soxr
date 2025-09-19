@@ -61,6 +61,8 @@ static soxr_datatype_t to_soxr_split_dtype(const type_info& ntype) {
 class CSoxr {
     soxr_t _soxr = nullptr;
     const double _oi_rate;
+    std::unique_ptr<uint8_t[]> _y_buf;
+    size_t _y_buf_size = 0;
 
 public:
     const double _in_rate;
@@ -121,12 +123,20 @@ public:
 
             const size_t ilen = x.shape(0);
 
-            // This is slower then allocating fixed `ilen * _oi_rate`.
-            // But it insures lowest output delay provided by libsoxr.
+            // This is slower than returning fixed `ilen * _oi_rate` buffers w/o copying.
+            // But it ensures the lowest output delay provided by libsoxr.
             const size_t olen = soxr_delay(_soxr) + ilen * _oi_rate + 1;
 
-            // alloc
-            y = new T[olen * channels] { 0 };
+            // Reuse output buffer if possible, else reallocate
+            size_t req_size = sizeof(T) * olen * channels;
+            if (!_y_buf || _y_buf_size < req_size) {
+                // Grow to next power of 2
+                size_t new_size = 1;
+                while (new_size < req_size) new_size <<= 1;
+                _y_buf = std::make_unique<uint8_t[]>(new_size);
+                _y_buf_size = new_size;
+            }
+            y = reinterpret_cast<T*>(_y_buf.get());
 
             // divide long input and process
             size_t odone = 0;
@@ -150,15 +160,11 @@ public:
         }
 
         if (err) {
-            delete[] y;
             throw std::runtime_error(err);
         }
 
-        // Delete 'y' when the 'owner' capsule expires
-        nb::capsule owner(y, [](void *p) noexcept {
-            delete[] (T *) p;
-        });
-        return ndarray<nb::numpy, T>(y, { out_pos, channels }, owner);
+        // Return a copy
+        return ndarray<nb::numpy, T>(y, { out_pos, channels }).cast();
     }
 
     size_t num_clips() { return *soxr_num_clips(_soxr); }

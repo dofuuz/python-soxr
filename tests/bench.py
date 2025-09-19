@@ -56,14 +56,15 @@ print(f'soxr split ch I/O: {t:f} (sec)')
 
 # soxr with clear()
 # It becomes faster then soxr.resample() when input length (=LEN) is short
-rs = soxr.ResampleStream(P, Q, sig.shape[1], dtype=sig.dtype, quality=QUALITY)
+if hasattr(soxr.ResampleStream, 'clear'):
+    rs = soxr.ResampleStream(P, Q, sig.shape[1], dtype=sig.dtype, quality=QUALITY)
 
-def soxr_with_reset():
-    rs.clear()
-    return rs.resample_chunk(sig, last=True)
+    def soxr_with_reset():
+        rs.clear()
+        return rs.resample_chunk(sig, last=True)
 
-t = timeit.timeit(soxr_with_reset, number=REPEAT)
-print(f'soxr w/ clear(): {t:f} (sec)')
+    t = timeit.timeit(soxr_with_reset, number=REPEAT)
+    print(f'soxr w/ clear(): {t:f} (sec)')
 
 
 # soxr stream chunk processing
