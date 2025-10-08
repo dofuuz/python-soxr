@@ -104,7 +104,6 @@ else ()
     option(WITH_OPENMP "" OFF)  # OpenMP seems not working (dunno why). Disable it for portability anyway.
     option(WITH_LSR_BINDINGS "" OFF)
     option(BUILD_SHARED_LIBS "" OFF)  # make it shared someday?
-    option(WITH_VR32 "" OFF)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     set(CMAKE_INSTALL_PREFIX ../install)
     add_subdirectory(libsoxr libsoxr)
