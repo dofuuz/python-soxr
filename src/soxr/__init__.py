@@ -77,11 +77,14 @@ class ResampleStream:
         quality : int or str, optional
             Quality setting.
             One of `QQ`, `LQ`, `MQ`, `HQ`, `VHQ`.
+        vr : bool, optional
+            (Experimental) Enable variable-rate resampling.
+            The ratio of the given in_rate and out_rate must equate to the maximum I/O ratio that will be used.
     """
 
     def __init__(self,
                  in_rate: float, out_rate: float, num_channels: int,
-                 dtype='float32', quality='HQ'):
+                 dtype='float32', quality='HQ', vr=False):
         if in_rate <= 0 or out_rate <= 0:
             raise ValueError('Sample rate should be over 0')
 
@@ -93,7 +96,7 @@ class ResampleStream:
 
         q = _quality_to_enum(quality)
 
-        self._csoxr = soxr_ext.CSoxr(in_rate, out_rate, num_channels, stype, q)
+        self._csoxr = soxr_ext.CSoxr(in_rate, out_rate, num_channels, stype, q, vr)
         self._process = getattr(self._csoxr, f'process_{self._type}')
 
     def resample_chunk(self, x: np.ndarray, last=False) -> np.ndarray:
@@ -155,6 +158,25 @@ class ResampleStream:
         This can be used to save initialization time.
         """
         self._csoxr.clear()
+
+    def set_io_ratio(self, in_rate: float, out_rate: float, slew_len: int = 0) -> None:
+        """ (Experimental) Set new sample-rate ratio for next processing.
+
+        `vr=True` must be set at constructor to use this function.
+        WARNING: It's an experimental feature and this API may change in future release.
+
+        Parameters
+        ----------
+        in_rate : float
+            New input sample-rate.
+        out_rate : float
+            New output sample-rate.
+        slew_len : int, optional
+            Length of smooth transition in input samples. (default: 0)
+            If slew_len > 0, the transition will be done smoothly over the given length.
+            If slew_len == 0, the transition will be done immediately.
+        """
+        self._csoxr.set_io_ratio(in_rate / out_rate, slew_len)
 
 
 def resample(x: ArrayLike, in_rate: float, out_rate: float, quality='HQ') -> np.ndarray:

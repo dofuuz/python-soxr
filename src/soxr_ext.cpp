@@ -60,9 +60,10 @@ static soxr_datatype_t to_soxr_split_dtype(const type_info& ntype) {
 
 class CSoxr {
     soxr_t _soxr = nullptr;
-    const double _oi_rate;
+    double _oi_ratio;
     std::unique_ptr<uint8_t[]> _y_buf;
-    size_t _y_buf_size = 0;
+    size_t _y_buf_bytes = 0;
+    size_t _olen = 0;
 
 public:
     const double _in_rate;
@@ -73,16 +74,16 @@ public:
     bool _ended = false;
 
     CSoxr(double in_rate, double out_rate, unsigned num_channels,
-          soxr_datatype_t ntype, unsigned long quality) :
+          soxr_datatype_t ntype, unsigned long quality, bool vr) :
             _in_rate(in_rate),
             _out_rate(out_rate),
-            _oi_rate(out_rate / in_rate),
+            _oi_ratio(out_rate / in_rate),
             _ntype(ntype),
             _channels(num_channels),
             _div_len(std::max(1000., 48000 * _in_rate / _out_rate)) {
         soxr_error_t err = NULL;
         soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
-        soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, 0);
+        soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, vr ? SOXR_VR : 0);
 
         _soxr = soxr_create(
             in_rate, out_rate, num_channels,
@@ -95,6 +96,51 @@ public:
 
     ~CSoxr() {
         soxr_delete(_soxr);
+    }
+
+    template <typename T>
+    T* _resize_ybuf(size_t req_size, bool copy) {
+        if (_y_buf && req_size < _y_buf_bytes)
+            return reinterpret_cast<T*>(_y_buf.get());
+
+        // Grow to next power of 2
+        size_t new_size = 1024;
+        while (new_size < req_size) new_size <<= 1;
+        // size_t new_size = req_size;
+
+        auto new_buf = std::make_unique<uint8_t[]>(new_size);
+        if (copy && _y_buf) {
+            std::copy_n(_y_buf.get(), _y_buf_bytes, new_buf.get());
+        }
+        _y_buf = std::move(new_buf);
+        _y_buf_bytes = new_size;
+        _olen = _y_buf_bytes / (sizeof(T) * _channels);
+
+        // printf("Realloc output buffer: %zu bytes\n", new_size);
+        // fflush(stdout);
+        return reinterpret_cast<T*>(_y_buf.get());
+    }
+
+    template <typename T>
+    T* _flush(soxr_in_t input, size_t& out_pos) {
+        // flush until no more output
+        T* y = reinterpret_cast<T*>(_y_buf.get());
+        size_t odone = 0;
+        // int cnt = 0;
+        do {
+            if (_olen <= out_pos) {
+                // printf("_flush Realloc cnt = %d\n", ++cnt);
+                y = _resize_ybuf<T>(_y_buf_bytes * 2, true);
+            }
+            soxr_error_t err = soxr_process(
+                _soxr,
+                input, 0, NULL,
+                &y[out_pos*_channels], _olen-out_pos, &odone);
+            out_pos += odone;
+
+            if (err != NULL) throw std::runtime_error(err);
+        } while (0 < odone);
+        return y;
     }
 
     template <typename T>
@@ -123,20 +169,10 @@ public:
 
             const size_t ilen = x.shape(0);
 
-            // This is slower than returning fixed `ilen * _oi_rate` buffers w/o copying.
+            // This is slower than returning fixed `ilen * _oi_ratio` buffers w/o copying.
             // But it ensures the lowest output delay provided by libsoxr.
-            const size_t olen = soxr_delay(_soxr) + ilen * _oi_rate + 1;
-
-            // Reuse output buffer if possible, else reallocate
-            size_t req_size = sizeof(T) * olen * channels;
-            if (!_y_buf || _y_buf_size < req_size) {
-                // Grow to next power of 2
-                size_t new_size = 1;
-                while (new_size < req_size) new_size <<= 1;
-                _y_buf = std::make_unique<uint8_t[]>(new_size);
-                _y_buf_size = new_size;
-            }
-            y = reinterpret_cast<T*>(_y_buf.get());
+            const size_t req_len = soxr_delay(_soxr) + ilen * _oi_ratio + 1;
+            y = _resize_ybuf<T>(sizeof(T) * req_len * channels, false);
 
             // divide long input and process
             size_t odone = 0;
@@ -144,19 +180,24 @@ public:
                 err = soxr_process(
                     _soxr,
                     &x.data()[idx*channels], std::min(_div_len, ilen-idx), NULL,
-                    &y[out_pos*channels], olen-out_pos, &odone);
+                    &y[out_pos*channels], _olen-out_pos, &odone);
                 out_pos += odone;
+
+                if (_olen <= out_pos) {
+                    // for VR mode, output buffer may be full
+                    y = _flush<T>(&x.data()[idx*channels], out_pos);
+                }
             }
 
             // flush if last input
             if (last) {
                 _ended = true;
-                err = soxr_process(
-                    _soxr,
-                    NULL, 0, NULL,
-                    &y[out_pos*channels], olen-out_pos, &odone);
-                out_pos += odone;
+                y = _flush<T>(NULL, out_pos);
             }
+
+            // if (_olen <= out_pos) {
+            //     printf("Warning: output buffer overflow %zu <= %zu\n", _olen, out_pos);
+            // }
         }
 
         if (err) {
@@ -175,6 +216,12 @@ public:
         soxr_error_t err = soxr_clear(_soxr);
         if (err != NULL) throw std::runtime_error(err);
         _ended = false;
+    }
+
+    void set_io_ratio(double io_ratio, size_t slew_len=0) {
+        soxr_error_t err = soxr_set_io_ratio(_soxr, io_ratio, slew_len);
+        if (err != NULL) throw std::runtime_error(err);
+        _oi_ratio = std::max(_oi_ratio, 1 / io_ratio);
     }
 };
 
@@ -385,7 +432,7 @@ NB_MODULE(soxr_ext, m) {
         .def_ro("ntype", &CSoxr::_ntype)
         .def_ro("channels", &CSoxr::_channels)
         .def_ro("ended", &CSoxr::_ended)
-        .def(nb::init<double, double, unsigned, soxr_datatype_t, unsigned long>())
+        .def(nb::init<double, double, unsigned, soxr_datatype_t, unsigned long, bool>())
         .def("process_float32", &CSoxr::process<float>)
         .def("process_float64", &CSoxr::process<double>)
         .def("process_int32", &CSoxr::process<int32_t>)
@@ -393,7 +440,8 @@ NB_MODULE(soxr_ext, m) {
         .def("num_clips", &CSoxr::num_clips)
         .def("delay", &CSoxr::delay)
         .def("engine", &CSoxr::engine)
-        .def("clear", &CSoxr::clear);
+        .def("clear", &CSoxr::clear)
+        .def("set_io_ratio", &CSoxr::set_io_ratio);
 
     m.def("csoxr_divide_proc_float32", csoxr_divide_proc<float>);
     m.def("csoxr_divide_proc_float64", csoxr_divide_proc<double>);
