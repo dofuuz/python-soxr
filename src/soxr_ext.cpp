@@ -13,7 +13,6 @@ Python-SoXR is a Python wrapper of libsoxr.
 #include <algorithm>
 #include <cmath>
 #include <memory>
-#include <typeinfo>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
@@ -23,7 +22,6 @@ Python-SoXR is a Python wrapper of libsoxr.
 #include "csoxr_version.h"
 
 
-using std::type_info;
 using std::make_unique;
 
 namespace nb = nanobind;
@@ -31,31 +29,21 @@ using namespace nb::literals;
 using nb::ndarray;
 
 
-static soxr_datatype_t to_soxr_datatype(const type_info& ntype) {
-    if (ntype == typeid(float))
-        return SOXR_FLOAT32_I;
-    else if (ntype == typeid(double))
-        return SOXR_FLOAT64_I;
-    else if (ntype == typeid(int32_t))
-        return SOXR_INT32_I;
-    else if (ntype == typeid(int16_t))
-        return SOXR_INT16_I;
-    else
-        throw nb::type_error("Data type not support");
-}
+template <typename T> constexpr soxr_datatype_t to_i_dtype = [] {
+    static_assert(sizeof(T) == 0, "Unsupported type for SOXR");
+}();
+template <> constexpr soxr_datatype_t to_i_dtype<float>   = SOXR_FLOAT32_I;
+template <> constexpr soxr_datatype_t to_i_dtype<double>  = SOXR_FLOAT64_I;
+template <> constexpr soxr_datatype_t to_i_dtype<int32_t> = SOXR_INT32_I;
+template <> constexpr soxr_datatype_t to_i_dtype<int16_t> = SOXR_INT16_I;
 
-static soxr_datatype_t to_soxr_split_dtype(const type_info& ntype) {
-    if (ntype == typeid(float))
-        return SOXR_FLOAT32_S;
-    else if (ntype == typeid(double))
-        return SOXR_FLOAT64_S;
-    else if (ntype == typeid(int32_t))
-        return SOXR_INT32_S;
-    else if (ntype == typeid(int16_t))
-        return SOXR_INT16_S;
-    else
-        throw nb::type_error("Data type not support");
-}
+template <typename T> constexpr soxr_datatype_t to_s_dtype = [] {
+    static_assert(sizeof(T) == 0, "Unsupported type for SOXR");
+}();
+template <> constexpr soxr_datatype_t to_s_dtype<float>   = SOXR_FLOAT32_S;
+template <> constexpr soxr_datatype_t to_s_dtype<double>  = SOXR_FLOAT64_S;
+template <> constexpr soxr_datatype_t to_s_dtype<int32_t> = SOXR_INT32_S;
+template <> constexpr soxr_datatype_t to_s_dtype<int16_t> = SOXR_INT16_S;
 
 
 class CSoxr {
@@ -155,7 +143,7 @@ public:
         if (channels != _channels)
             throw std::invalid_argument("Channel num mismatch");
 
-        const soxr_datatype_t ntype = to_soxr_datatype(typeid(T));
+        constexpr soxr_datatype_t ntype = to_i_dtype<T>;
 
         if (ntype != _ntype)
             throw nb::type_error("Data type mismatch");
@@ -242,7 +230,7 @@ auto csoxr_divide_proc(
     do {
         nb::gil_scoped_release release;
 
-        const soxr_datatype_t ntype = to_soxr_datatype(typeid(T));
+        constexpr soxr_datatype_t ntype = to_i_dtype<T>;
 
         // init soxr
         const soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
@@ -317,7 +305,7 @@ auto csoxr_split_ch(
     do {
         nb::gil_scoped_release release;
 
-        const soxr_datatype_t ntype = to_soxr_split_dtype(typeid(T));
+        constexpr soxr_datatype_t ntype = to_s_dtype<T>;
 
         // init soxr
         const soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
@@ -389,7 +377,7 @@ auto csoxr_oneshot(
     const size_t olen = ilen * out_rate / in_rate + 1;
     unsigned channels = x.shape(1);
 
-    const soxr_datatype_t ntype = to_soxr_datatype(typeid(T));
+    constexpr soxr_datatype_t ntype = to_i_dtype<T>;
 
     // make soxr config
     soxr_error_t err = NULL;
