@@ -48,17 +48,17 @@ template <> constexpr soxr_datatype_t to_s_dtype<int16_t> = SOXR_INT16_S;
 
 class CSoxr {
     soxr_t _soxr = nullptr;
-    double _oi_ratio;
+    double _oi_ratio;           // out_rate/in_rate
     std::unique_ptr<uint8_t[]> _y_buf;
-    size_t _y_buf_bytes = 0;
-    size_t _olen = 0;
+    size_t _y_buf_bytes = 0;    // _y_buf size in bytes
+    size_t _olen = 0;           // _y_buf size in frames
 
 public:
     const double _in_rate;
     const double _out_rate;
     const soxr_datatype_t _ntype;
     const unsigned _channels;
-    const size_t _div_len;
+    const size_t _div_len;      // length to divide long input (in frames)
     bool _ended = false;
 
     CSoxr(double in_rate, double out_rate, unsigned num_channels,
@@ -94,7 +94,6 @@ public:
         // Grow to next power of 2
         size_t new_size = 1024;
         while (new_size < req_size) new_size <<= 1;
-        // size_t new_size = req_size;
 
         auto new_buf = std::make_unique<uint8_t[]>(new_size);
         if (copy && _y_buf) {
@@ -104,8 +103,6 @@ public:
         _y_buf_bytes = new_size;
         _olen = _y_buf_bytes / (sizeof(T) * _channels);
 
-        // printf("Realloc output buffer: %zu bytes\n", new_size);
-        // fflush(stdout);
         return reinterpret_cast<T*>(_y_buf.get());
     }
 
@@ -114,10 +111,8 @@ public:
         // flush until no more output
         T* y = reinterpret_cast<T*>(_y_buf.get());
         size_t odone = 0;
-        // int cnt = 0;
         do {
             if (_olen <= out_pos) {
-                // printf("_flush Realloc cnt = %d\n", ++cnt);
                 y = _resize_ybuf<T>(_y_buf_bytes * 2, true);
             }
             soxr_error_t err = soxr_process(
@@ -182,10 +177,6 @@ public:
                 _ended = true;
                 y = _flush<T>(NULL, out_pos);
             }
-
-            // if (_olen <= out_pos) {
-            //     printf("Warning: output buffer overflow %zu <= %zu\n", _olen, out_pos);
-            // }
         }
 
         if (err) {

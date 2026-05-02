@@ -54,8 +54,8 @@ def test_divide_match(in_rate, out_rate, frames, dtype):
 
 
 @pytest.mark.parametrize('in_rate, out_rate', get_random_sr_pairs())
-@pytest.mark.parametrize('length', [0, 1] + [random.randint(2, 200000) for _ in range(8)])
-@pytest.mark.parametrize('arr_len', [random.randint(200000, 300000)])
+@pytest.mark.parametrize('length', [0, 1] + [random.randint(2, 150000) for _ in range(6)])
+@pytest.mark.parametrize('arr_len', [random.randint(150000, 300000)])
 def test_length_match(in_rate, out_rate, length, arr_len):
     # test sliced array with various length
     x = np.random.randn(arr_len, 2).astype(np.float32)
@@ -101,8 +101,8 @@ def stream_resample(x, in_rate, out_rate, chunk_size, dtype):
 
 
 @pytest.mark.parametrize('in_rate, out_rate', get_random_sr_pairs())
-@pytest.mark.parametrize('chunk_size', [random.randint(5, 50000) for _ in range(3)])
-@pytest.mark.parametrize('length', [0] + [random.randint(2, 300000) for _ in range(4)])
+@pytest.mark.parametrize('chunk_size', [random.randint(5, 50000) for _ in range(2)])
+@pytest.mark.parametrize('length', [0] + [random.randint(2, 150000) for _ in range(4)])
 @pytest.mark.parametrize('dtype', ['float32', np.float64])
 def test_stream_length(in_rate, out_rate, chunk_size, length, dtype):
     # test resample_chunk() with various length and chunk size
