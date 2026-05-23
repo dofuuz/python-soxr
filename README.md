@@ -111,10 +111,11 @@ samplerate (sinc_best)   | 794
 For technical details behind resampler, see libsoxr docs.
 - https://sourceforge.net/p/soxr/wiki/Home/
 - http://sox.sourceforge.net/SoX/Resampling ([archive](https://web.archive.org/web/20230626144127/https://sox.sourceforge.net/SoX/Resampling))
+- https://sourceforge.net/p/soxr/code/ci/master/tree/README
 - https://sourceforge.net/p/soxr/code/ci/master/tree/src/soxr.h
 
-Python-SoXR package comes with [modified version](https://github.com/dofuuz/soxr) of libsoxr. [See changes here](https://github.com/dofuuz/soxr/compare/0.1.3...master).  
-These changes do not apply to dynamic-linked builds (e.g. conda-forge build).  
+The Python-SoXR package comes with a [patched version](https://github.com/dofuuz/soxr) of libsoxr. [See patch notes here](https://dofuuz.github.io/dsp/2026/05/22/libsoxr-patch-notes.html).  
+The patch does not apply to dynamic-linked builds (e.g. conda-forge builds).  
 To check the version of libsoxr, use `soxr.__libsoxr_version__`.
 
 
