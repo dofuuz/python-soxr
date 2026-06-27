@@ -75,7 +75,7 @@ sdist.cmake = true
 build-verbosity = 1
 
 # Run pytest to ensure that the package was correctly built
-test-command = "pytest {project}/tests"
+test-command = "pytest --durations=5 {project}/tests"
 test-extras = ["test"]
 
 # Needed for full C++17 support

@@ -9,8 +9,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.12", "3.14", "3.14t", "pypy3.11"]
-        os: [ubuntu-latest, windows-latest, macos-latest, macos-15-intel]
+        python-version: ["3.11", "3.14", "3.14t", "pypy3.11"]
+        os: [ubuntu-latest, windows-latest, windows-11-arm, macos-latest, macos-15-intel]
+        exclude:
+          - python-version: "pypy3.11"
+            os: windows-11-arm
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -36,7 +39,7 @@ jobs:
     - name: Test with pytest
       run: |
         cd tests
-        python -m pytest -v
+        python -m pytest -v --durations=5 
 
   build_external:
     runs-on: ubuntu-latest
@@ -53,4 +56,4 @@ jobs:
     - name: Test with pytest
       run: |
         cd tests
-        python -m pytest -v
+        python -m pytest -v --durations=5
