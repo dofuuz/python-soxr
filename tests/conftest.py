@@ -3,14 +3,14 @@ import soxr
 
 # Adding info to pytest report header
 def pytest_report_header(config):
-    rs32 = soxr.ResampleStream(44100, 48000, 1, dtype='float32')
-    f32_engine = rs32._csoxr.engine()
+    rs_hq = soxr.ResampleStream(44100, 48000, 1, quality='HQ')
+    hq_engine = rs_hq._csoxr.engine()
 
-    rs64 = soxr.ResampleStream(44100, 48000, 1, dtype='float64')
-    f64_engine = rs64._csoxr.engine()
+    rs_vhq = soxr.ResampleStream(44100, 48000, 1, quality='VHQ')
+    vhq_engine = rs_vhq._csoxr.engine()
 
     return [
         f"{soxr.__version__ = }",
         f"{soxr.__libsoxr_version__ = }",
-        f"{f32_engine = }",
-        f"{f64_engine = }",]
+        f"{hq_engine = }",
+        f"{vhq_engine = }",]
