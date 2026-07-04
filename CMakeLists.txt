@@ -99,14 +99,45 @@ else ()
         libsoxr/src
     )
 
-    # Build static libsoxr
+    # Build libsoxr
     option(BUILD_TESTS "" OFF)
     option(WITH_OPENMP "" OFF)  # OpenMP seems not working (dunno why). Disable it for portability anyway.
     option(WITH_LSR_BINDINGS "" OFF)
-    option(BUILD_SHARED_LIBS "" OFF)  # make it shared someday?
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libsoxr" FORCE)
+
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     set(CMAKE_INSTALL_PREFIX ../install)
     add_subdirectory(libsoxr libsoxr)
+
+    # --- RPATH / loader path: soxr_ext must find libsoxr at runtime ---
+    # Both files end up in the same soxr/ package directory inside the wheel.
+    if(APPLE)
+        set_target_properties(soxr_ext PROPERTIES
+            BUILD_RPATH "$<TARGET_FILE_DIR:soxr>"
+            INSTALL_RPATH "@loader_path"
+        )
+        set_target_properties(soxr PROPERTIES
+            INSTALL_NAME_DIR "@rpath"
+        )
+    elseif(UNIX)
+        set_target_properties(soxr_ext PROPERTIES
+            BUILD_RPATH "$<TARGET_FILE_DIR:soxr>"
+            INSTALL_RPATH "$ORIGIN"
+        )
+    else()
+        # Windows: ensure the DLL lands next to the .pyd in the build tree
+        # (libsoxr's CMakeLists redirects DLL output to bin/ by default)
+        set_target_properties(soxr PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+        )
+    endif()
+
+    # Install shared libsoxr alongside the extension in the wheel package
+    install(TARGETS soxr
+        LIBRARY DESTINATION soxr
+        RUNTIME DESTINATION soxr
+    )
 
     # Copy licenses to package (scikit-build-core)
     install(FILES cmake/LICENSE-PFFFT.txt DESTINATION ${SKBUILD_METADATA_DIR}/licenses)
