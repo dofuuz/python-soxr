@@ -109,6 +109,15 @@ else ()
     set(CMAKE_INSTALL_PREFIX ../install)
     add_subdirectory(libsoxr libsoxr)
 
+    # Clear SONAME versioning so only a single libsoxr.so/.dylib is produced.
+    # libsoxr's CMake sets VERSION/SOVERSION which creates versioned symlinks
+    # (libsoxr.so.0.1.2, libsoxr.so.0, libsoxr.so). In a ZIP-based wheel these
+    # symlinks become duplicated files, inflating package size 3x.
+    set_target_properties(soxr PROPERTIES
+        VERSION ""
+        SOVERSION ""
+    )
+
     # --- RPATH / loader path: soxr_ext must find libsoxr at runtime ---
     # Both files end up in the same soxr/ package directory inside the wheel.
     if(APPLE)
