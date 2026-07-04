@@ -113,9 +113,10 @@ else ()
     # libsoxr's CMake sets VERSION/SOVERSION which creates versioned symlinks
     # (libsoxr.so.0.1.2, libsoxr.so.0, libsoxr.so). In a ZIP-based wheel these
     # symlinks become duplicated files, inflating package size 3x.
+    # NO_SONAME prevents generation of any versioned symlink; a plain
+    # libsoxr.so (no suffix) is the only output.
     set_target_properties(soxr PROPERTIES
-        VERSION ""
-        SOVERSION ""
+        NO_SONAME ON
     )
 
     # --- RPATH / loader path: soxr_ext must find libsoxr at runtime ---
