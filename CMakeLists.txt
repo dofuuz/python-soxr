@@ -114,13 +114,20 @@ else ()
     # (libsoxr.so.0.1.2, libsoxr.so.0, libsoxr.so). In a ZIP-based wheel these
     # symlinks become duplicated files, inflating package size 3x.
     # NO_SONAME prevents generation of any versioned symlink.
-    # However, without a SONAME the linker records the build-tree path as the
-    # DT_NEEDED entry (e.g. "libsoxr/src/libsoxr.so") instead of just
-    # "libsoxr.so". We must explicitly inject the SONAME via linker flags
-    # so the dynamic linker can find the library at runtime via RPATH.
+    #
+    # On Linux, NO_SONAME also strips the SONAME field, which causes the linker
+    # to record a build-tree path as DT_NEEDED. We restore it via -Wl,-soname.
+    #
+    # On macOS, NO_SONAME does NOT prevent CMake from passing an -install_name
+    # flag derived from INSTALL_NAME_DIR. That flag overrides ours, so we use a
+    # POST_BUILD install_name_tool step to fix it after the dylib is linked.
     set_target_properties(soxr PROPERTIES NO_SONAME ON)
     if(APPLE)
-        target_link_options(soxr PRIVATE "-Wl,-install_name,@rpath/libsoxr.dylib")
+        add_custom_command(TARGET soxr POST_BUILD
+            COMMAND install_name_tool -id @loader_path/libsoxr.dylib
+                $<TARGET_FILE:soxr>
+            COMMENT "Fixing libsoxr.dylib install name for wheel bundling"
+        )
     elseif(UNIX)
         target_link_options(soxr PRIVATE "-Wl,-soname,libsoxr.so")
     endif()
@@ -128,9 +135,11 @@ else ()
     # --- RPATH / loader path: soxr_ext must find libsoxr at runtime ---
     # Both files end up in the same soxr/ package directory inside the wheel.
     if(APPLE)
+        # libsoxr.dylib uses @loader_path install name (set above), so it is
+        # found relative to soxr_ext without any RPATH. BUILD_RPATH is still
+        # needed for stub generation during the build.
         set_target_properties(soxr_ext PROPERTIES
             BUILD_RPATH "$<TARGET_FILE_DIR:soxr>"
-            INSTALL_RPATH "@loader_path"
         )
     elseif(UNIX)
         set_target_properties(soxr_ext PROPERTIES
