@@ -109,15 +109,21 @@ else ()
     set(CMAKE_INSTALL_PREFIX ../install)
     add_subdirectory(libsoxr libsoxr)
 
-    # Clear SONAME versioning so only a single libsoxr.so/.dylib is produced.
+    # Suppress versioned symlinks so only a single libsoxr.so/.dylib is produced.
     # libsoxr's CMake sets VERSION/SOVERSION which creates versioned symlinks
     # (libsoxr.so.0.1.2, libsoxr.so.0, libsoxr.so). In a ZIP-based wheel these
     # symlinks become duplicated files, inflating package size 3x.
-    # NO_SONAME prevents generation of any versioned symlink; a plain
-    # libsoxr.so (no suffix) is the only output.
-    set_target_properties(soxr PROPERTIES
-        NO_SONAME ON
-    )
+    # NO_SONAME prevents generation of any versioned symlink.
+    # However, without a SONAME the linker records the build-tree path as the
+    # DT_NEEDED entry (e.g. "libsoxr/src/libsoxr.so") instead of just
+    # "libsoxr.so". We must explicitly inject the SONAME via linker flags
+    # so the dynamic linker can find the library at runtime via RPATH.
+    set_target_properties(soxr PROPERTIES NO_SONAME ON)
+    if(APPLE)
+        target_link_options(soxr PRIVATE "-Wl,-install_name,@rpath/libsoxr.dylib")
+    elseif(UNIX)
+        target_link_options(soxr PRIVATE "-Wl,-soname,libsoxr.so")
+    endif()
 
     # --- RPATH / loader path: soxr_ext must find libsoxr at runtime ---
     # Both files end up in the same soxr/ package directory inside the wheel.
@@ -125,9 +131,6 @@ else ()
         set_target_properties(soxr_ext PROPERTIES
             BUILD_RPATH "$<TARGET_FILE_DIR:soxr>"
             INSTALL_RPATH "@loader_path"
-        )
-        set_target_properties(soxr PROPERTIES
-            INSTALL_NAME_DIR "@rpath"
         )
     elseif(UNIX)
         set_target_properties(soxr_ext PROPERTIES
