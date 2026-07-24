@@ -58,7 +58,6 @@ public:
     const double _out_rate;
     const soxr_datatype_t _ntype;
     const unsigned _channels;
-    const size_t _div_len;      // length to divide long input (in frames)
     bool _ended = false;
 
     CSoxr(double in_rate, double out_rate, unsigned num_channels,
@@ -67,8 +66,7 @@ public:
             _out_rate(out_rate),
             _oi_ratio(out_rate / in_rate),
             _ntype(ntype),
-            _channels(num_channels),
-            _div_len(std::max(1000., 48000 * _in_rate / _out_rate)) {
+            _channels(num_channels) {
         soxr_error_t err = NULL;
         soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
         soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, vr ? SOXR_VR : 0);
@@ -157,19 +155,16 @@ public:
             const size_t req_len = soxr_delay(_soxr) + ilen * _oi_ratio + 1;
             y = _resize_ybuf<T>(sizeof(T) * req_len * channels, false);
 
-            // divide long input and process
             size_t odone = 0;
-            for (size_t idx = 0; idx < ilen; idx += _div_len) {
-                err = soxr_process(
-                    _soxr,
-                    &x.data()[idx*channels], std::min(_div_len, ilen-idx), NULL,
-                    &y[out_pos*channels], _olen-out_pos, &odone);
-                out_pos += odone;
+            err = soxr_process(
+                _soxr,
+                x.data(), ilen, NULL,
+                y, _olen-out_pos, &odone);
+            out_pos += odone;
 
-                if (_olen <= out_pos) {
-                    // for VR mode, output buffer may be full
-                    y = _flush<T>(&x.data()[idx*channels], out_pos);
-                }
+            if (_olen <= out_pos) {
+                // for VR mode, output buffer may be insufficient
+                y = _flush<T>(x.data(), out_pos);
             }
 
             // flush if last input

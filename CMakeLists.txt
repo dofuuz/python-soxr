@@ -103,7 +103,7 @@ else ()
     option(BUILD_TESTS "" OFF)
     option(WITH_OPENMP "" OFF)  # OpenMP seems not working (dunno why). Disable it for portability anyway.
     option(WITH_LSR_BINDINGS "" OFF)
-    option(BUILD_SHARED_LIBS "" OFF)  # make it shared someday?
+    option(BUILD_SHARED_LIBS "" OFF)  # Separate shared libsoxr build would need a dirty rpath workaround.
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     set(CMAKE_INSTALL_PREFIX ../install)
     add_subdirectory(libsoxr libsoxr)
