@@ -28,6 +28,10 @@ endif()
 # Turn on to link libsoxr dynamically and not to bundle libsoxr in the wheel package
 option(USE_SYSTEM_LIBSOXR "Build using system libsoxr" OFF)
 
+# Turn off to skip type stub generation (useful if it fails in some environments).
+# Stub generation is automatically disabled when CMAKE_CROSSCOMPILING is ON.
+option(PYSOXR_STUB_GEN "Generate type stub" ON)
+
 find_package(Python 3.9
     REQUIRED COMPONENTS Interpreter Development.Module
     OPTIONAL_COMPONENTS Development.SABIModule)
@@ -65,7 +69,7 @@ nanobind_add_module(soxr_ext STABLE_ABI FREE_THREADED NB_STATIC
     ${CSOXR_VER_C}
 )
 
-if (NOT CMAKE_CROSSCOMPILING)
+if (PYSOXR_STUB_GEN AND NOT CMAKE_CROSSCOMPILING)
     # nanobind's stub generation requires importing the module, so skip it when cross-compiling
     nanobind_add_stub(soxr_ext_stub
         MODULE soxr_ext
