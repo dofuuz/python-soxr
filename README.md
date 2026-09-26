@@ -121,18 +121,22 @@ To check the version of libsoxr, use `soxr.__libsoxr_version__`.
 
 ## Credit and License
 
-Python-SoXR is LGPL v2.1+ licensed, following libsoxr's license.
+Python-SoXR is LGPL-2.1-or-later licensed, following libsoxr's license.
 
 ### OSS libraries used
 
-#### libsoxr (LGPLv2.1+)
+#### libsoxr (LGPL-2.1-or-later)
 The SoX Resampler library  
 https://sourceforge.net/projects/soxr/
 
 Python-SoXR is a Python wrapper of libsoxr.
 
-#### PFFFT (BSD-like)
+#### PFFFT ([BSD-like](cmake/LICENSE-PFFFT.txt))
 PFFFT: a pretty fast FFT.  
 https://bitbucket.org/jpommier/pffft/  
 
 libsoxr dependency.
+
+#### nanobind (BSD-3-Clause)
+nanobind: tiny and efficient C++/Python bindings  
+https://github.com/wjakob/nanobind

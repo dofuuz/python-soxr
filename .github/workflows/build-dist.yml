@@ -28,7 +28,7 @@ jobs:
           submodules: true
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.4
+        uses: pypa/cibuildwheel@v4.2
         env:
           # Skip builds(save time / avoid build error)
           CIBW_SKIP: "*-musllinux_* *-win32"
@@ -78,7 +78,7 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/*.tar.gz

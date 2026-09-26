@@ -9,11 +9,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.14", "3.14t", "pypy3.11"]
+        python-version: ["3.11", "3.14", "3.14t", "3.15-dev"]
         os: [ubuntu-latest, windows-latest, windows-11-arm, macos-latest, macos-15-intel]
-        exclude:
-          - python-version: "pypy3.11"
-            os: windows-11-arm
     runs-on: ${{ matrix.os }}
 
     steps:
