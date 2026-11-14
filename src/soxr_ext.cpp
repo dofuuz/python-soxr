@@ -13,6 +13,7 @@ Python-SoXR is a Python wrapper of libsoxr.
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <vector>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
@@ -63,9 +64,7 @@ static double check_io_ratio(double in_rate, double out_rate) {
 class CSoxr {
     soxr_t _soxr = nullptr;
     double _io_ratio;           // current in_rate/out_rate
-    std::unique_ptr<uint8_t[]> _y_buf;
-    size_t _y_buf_bytes = 0;    // _y_buf size in bytes
-    size_t _olen = 0;           // _y_buf size in frames
+    std::vector<uint8_t> _y_buf;    // output buffer, reused across process() calls
 
 public:
     const double _in_rate;
@@ -99,46 +98,6 @@ public:
     }
 
     template <typename T>
-    T* _resize_ybuf(size_t req_size, bool copy) {
-        if (_y_buf && req_size < _y_buf_bytes)
-            return reinterpret_cast<T*>(_y_buf.get());
-
-        // Grow to next power of 2
-        size_t new_size = 1024;
-        while (new_size < req_size) new_size <<= 1;
-
-        auto new_buf = std::make_unique<uint8_t[]>(new_size);
-        if (copy && _y_buf) {
-            std::copy_n(_y_buf.get(), _y_buf_bytes, new_buf.get());
-        }
-        _y_buf = std::move(new_buf);
-        _y_buf_bytes = new_size;
-        _olen = _y_buf_bytes / (sizeof(T) * _channels);
-
-        return reinterpret_cast<T*>(_y_buf.get());
-    }
-
-    template <typename T>
-    T* _flush(soxr_in_t input, size_t& out_pos) {
-        // flush until no more output
-        T* y = reinterpret_cast<T*>(_y_buf.get());
-        size_t odone = 0;
-        do {
-            if (_olen <= out_pos) {
-                y = _resize_ybuf<T>(_y_buf_bytes * 2, true);
-            }
-            soxr_error_t err = soxr_process(
-                _soxr,
-                input, 0, NULL,
-                &y[out_pos*_channels], _olen-out_pos, &odone);
-            out_pos += odone;
-
-            if (err != NULL) throw std::runtime_error(err);
-        } while (0 < odone);
-        return y;
-    }
-
-    template <typename T>
     auto process(
             ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
             bool last=false) {
@@ -155,36 +114,44 @@ public:
         if (ntype != _ntype)
             throw nb::type_error("Data type mismatch");
 
-        T *y = nullptr;
+        const size_t frame_bytes = sizeof(T) * channels;
+        soxr_in_t in = x.data();
+        size_t ilen = x.shape(0);
+        size_t out_pos = 0;
 
         soxr_error_t err = NULL;
-        size_t out_pos = 0;
         {
             nb::gil_scoped_release release;
 
-            const size_t ilen = x.shape(0);
-
             // This is slower than returning fixed `ilen / _io_ratio` buffers w/o copying.
             // But it ensures the lowest output delay provided by libsoxr.
-            const size_t req_len = soxr_delay(_soxr) + ilen / _io_ratio + 1;
-            y = _resize_ybuf<T>(sizeof(T) * req_len * channels, false);
+            size_t req_len = soxr_delay(_soxr) + ilen / _io_ratio + 1;
 
-            size_t odone = 0;
-            err = soxr_process(
-                _soxr,
-                x.data(), ilen, NULL,
-                y, _olen-out_pos, &odone);
-            out_pos += odone;
+            while (true) {
+                if (_y_buf.size() < req_len * frame_bytes)
+                    _y_buf.resize(req_len * frame_bytes);
+                const size_t olen = _y_buf.size() / frame_bytes;
 
-            if (_olen <= out_pos) {
-                // for VR mode, output buffer may be insufficient
-                y = _flush<T>(x.data(), out_pos);
-            }
+                size_t odone = 0;
+                err = soxr_process(
+                    _soxr,
+                    in, ilen, NULL,
+                    &_y_buf[out_pos * frame_bytes], olen-out_pos, &odone);
+                out_pos += odone;
+                ilen = 0;   // soxr takes whole input at once
 
-            // flush if last input
-            if (last) {
-                _ended = true;
-                y = _flush<T>(NULL, out_pos);
+                if (err) break;
+
+                if (out_pos == olen) {
+                    // output buffer full, there may be more (e.g. VR mode)
+                    req_len = olen * 2;
+                } else if (last && !_ended) {
+                    // output drained, signal end of input and flush
+                    _ended = true;
+                    in = NULL;
+                } else {
+                    break;
+                }
             }
         }
 
@@ -193,6 +160,7 @@ public:
         }
 
         // Return a copy
+        T *y = reinterpret_cast<T*>(_y_buf.data());
         return ndarray<nb::numpy, T>(y, { out_pos, channels }).cast();
     }
 
