@@ -212,3 +212,63 @@ def test_mt_dither(num_task):
         assert np.all(results[-2] == results[-1])
     except AssertionError:
         pytest.xfail("Random dithering seed used. May produce slightly different result when using int I/O.")
+
+
+def get_random_vr_sr_pairs():
+    # limit rate ratio under 4. VR timing error gets bigger with higher ratio
+    return [
+        (random.randint(24000, 96000), random.randint(24000, 96000)),
+        (random.uniform(24000, 96000), random.uniform(24000, 96000)),
+    ]
+
+
+@pytest.mark.parametrize('in_rate,out_rate', get_random_vr_sr_pairs())
+@pytest.mark.parametrize('dtype', [np.float32, np.float64, np.int32, np.int16])
+def test_vr_sine(in_rate, out_rate, dtype):
+    # VR mode: change I/O ratio on the way and compare result with reference
+    FREQ = 32.0
+    DURATION = 4.0
+    scale = 16384 if np.issubdtype(dtype, np.integer) else 1
+
+    x1 = (make_tone(FREQ, in_rate, DURATION) * scale).astype(dtype)
+    x2 = (make_tone(FREQ, out_rate, DURATION) * scale).astype(dtype)
+    y1 = (make_tone(FREQ, out_rate, DURATION) * scale).astype(dtype)
+    y2 = (make_tone(FREQ, in_rate, DURATION) * scale).astype(dtype)
+
+    rs = soxr.ResampleStream(4, 1, 1, dtype=dtype, vr=True)     # max I/O ratio: 4
+    rs.set_io_ratio(in_rate, out_rate)
+    y1_pred = rs.resample_chunk(x1)
+    rs.set_io_ratio(out_rate, in_rate)
+    y2_pred = rs.resample_chunk(x2, last=True)
+
+    y = np.concatenate([y1, y2])
+    y_pred = np.concatenate([y1_pred, y2_pred])
+
+    # Input pending at set_io_ratio() is resampled with new ratio. So length differs slightly.
+    # Compare y1 from the start and y2 from the end. (VR engine has ~2 samples of delay)
+    assert y_pred.dtype == y.dtype
+    assert abs(len(y_pred) - len(y)) < 0.03 * len(y)
+    assert np.allclose(y1, y_pred[:len(y1)], atol=0.05 * scale)
+    assert np.allclose(y2, y_pred[-len(y2):], atol=0.05 * scale)
+
+
+@pytest.mark.parametrize('io_ratio', [random.uniform(0.25, 4)])
+@pytest.mark.parametrize('chunk_size', [1] + [random.randint(2, 5000) for _ in range(3)])
+@pytest.mark.parametrize('length', [random.randint(2, 30000)])
+def test_vr_chunk_match(io_ratio, chunk_size, length):
+    # VR output should not depend on chunk size
+    # (Not tested with ratio change. It makes tiny difference when jumping over 2 octaves)
+    x = np.random.randn(length, 2).astype(np.float32)
+
+    def run(chunk):
+        rs = soxr.ResampleStream(4, 1, 2, vr=True)
+        rs.set_io_ratio(io_ratio, 1)
+        y_list = [rs.resample_chunk(x[i:i + chunk]) for i in range(0, length, chunk)]
+        y_list.append(rs.resample_chunk(x[:0], last=True))
+        return np.concatenate(y_list)
+
+    y_whole = run(length)
+    y_chunk = run(chunk_size)
+
+    assert y_whole.shape == y_chunk.shape
+    assert np.all(y_whole == y_chunk)

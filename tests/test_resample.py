@@ -17,12 +17,15 @@ import pytest
 import soxr
 
 
-@pytest.mark.parametrize('in_rate, out_rate', [(100, 0), (50, -1), (0, 100.5), (-1.5, 100)])
+@pytest.mark.parametrize('in_rate, out_rate', [(100, 0), (50, -1), (0, 100.5), (-1.5, 100), (float('nan'), 100), (100, float('inf'))])
 def test_bad_sr(in_rate, out_rate):
     # test invalid samplerate
     x = np.zeros(100)
-    with pytest.raises(ValueError):
+    # NaN, inf are rejected by libsoxr (RuntimeError) or at output buffer allocation (MemoryError)
+    with pytest.raises((ValueError, RuntimeError, MemoryError)):
         soxr.resample(x, in_rate, out_rate)
+    with pytest.raises((ValueError, RuntimeError)):
+        soxr.ResampleStream(in_rate, out_rate, 1)
 
 
 @pytest.mark.parametrize('dtype', [np.float32, np.float64, np.int16, np.int32])
@@ -209,3 +212,64 @@ def test_mt_dither(num_task):
         assert np.all(results[-2] == results[-1])
     except AssertionError:
         pytest.xfail("Random dithering seed used. May produce slightly different result when using int I/O.")
+
+
+@pytest.mark.parametrize('in_rate,out_rate', [(48000, 12000), (44100, 22050), (22050, 32000)])
+@pytest.mark.parametrize('dtype', [np.float32, np.float64, np.int32, np.int16])
+def test_vr_sine(in_rate, out_rate, dtype):
+    # VR mode: change I/O ratio on the way and compare result with reference
+    FREQ = 32.0
+    DURATION = 2.0
+    scale = 16384 if np.issubdtype(dtype, np.integer) else 1
+
+    x1 = (make_tone(FREQ, in_rate, DURATION) * scale).astype(dtype)
+    x2 = (make_tone(FREQ, out_rate, DURATION) * scale).astype(dtype)
+    y1 = (make_tone(FREQ, out_rate, DURATION) * scale).astype(dtype)
+    y2 = (make_tone(FREQ, in_rate, DURATION) * scale).astype(dtype)
+
+    rs = soxr.ResampleStream(4, 1, 2, dtype=dtype, vr=True)     # max I/O ratio: 4
+    rs.set_io_ratio(in_rate, out_rate)
+    y1_pred = rs.resample_chunk(x1)
+    rs.set_io_ratio(out_rate, in_rate)
+    y2_pred = rs.resample_chunk(x2, last=True)
+
+    y = np.concatenate([y1, y2])
+    y_pred = np.concatenate([y1_pred, y2_pred])
+
+    # Input pending at set_io_ratio() is resampled with new ratio. So length differs slightly.
+    # Compare y1 from the start and y2 from the end. (VR engine has ~2 samples of delay)
+    assert y_pred.dtype == y.dtype
+    assert abs(len(y_pred) - len(y)) < 0.03 * len(y)
+    assert np.allclose(y1, y_pred[:len(y1)], atol=0.05 * scale)
+    assert np.allclose(y2, y_pred[-len(y2):], atol=0.05 * scale)
+
+
+@pytest.mark.parametrize('chunk_size', [1, 17, 509])
+def test_vr_chunk_match(chunk_size):
+    # VR output should not depend on chunk size (incl. ratio change on the way)
+    x = np.random.randn(20011, 2).astype(np.float32)
+
+    def run(chunk):
+        rs = soxr.ResampleStream(3, 1, 2, vr=True)
+        y_list = []
+        for part, io_ratio in [(x[:10000], 1.7), (x[10000:], 0.6)]:
+            rs.set_io_ratio(io_ratio, 1)
+            y_list += [rs.resample_chunk(part[i:i + chunk]) for i in range(0, len(part), chunk)]
+        y_list.append(rs.resample_chunk(x[:0], last=True))
+        return np.concatenate(y_list)
+
+    y_whole = run(len(x))
+    y_chunk = run(chunk_size)
+
+    assert y_whole.shape == y_chunk.shape
+    assert np.all(y_whole == y_chunk)
+
+
+@pytest.mark.parametrize('in_rate, out_rate, slew_len', [
+    (float('nan'), 1, 0), (float('inf'), 1, 0), (1, float('inf'), 0), (-1, 1, 0), (1, 0, 0),
+    (1e30, 1, 0), (1, 1e30, 0), (1, 1, -1), (1, 1, 2**32)])
+def test_vr_bad_ratio(in_rate, out_rate, slew_len):
+    # these values should be rejected (mostly by libsoxr), not crash or hang
+    rs = soxr.ResampleStream(4, 1, 1, vr=True)
+    with pytest.raises((ValueError, RuntimeError, TypeError)):
+        rs.set_io_ratio(in_rate, out_rate, slew_len)

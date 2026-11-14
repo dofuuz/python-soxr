@@ -7,6 +7,8 @@
 # High quality, one-dimensional sample-rate conversion library for Python.
 # Python-SoXR is a Python wrapper of libsoxr.
 
+import warnings
+
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -79,7 +81,9 @@ class ResampleStream:
             One of `QQ`, `LQ`, `MQ`, `HQ`, `VHQ`.
         vr : bool, optional
             (Experimental) Enable variable-rate resampling.
-            The ratio of the given in_rate and out_rate must equate to the maximum I/O ratio that will be used.
+            The ratio of the given in_rate and out_rate must equate to the maximum I/O ratio
+            (in_rate / out_rate) that will be used.
+            In this mode, `quality` is ignored (the VR engine has its own fixed quality).
     """
 
     def __init__(self,
@@ -96,6 +100,7 @@ class ResampleStream:
 
         q = _quality_to_enum(quality)
 
+        self._max_io_ratio = in_rate / out_rate
         self._csoxr = soxr_ext.CSoxr(in_rate, out_rate, num_channels, stype, q, vr)
         self._process = getattr(self._csoxr, f'process_{self._type}')
 
@@ -149,6 +154,7 @@ class ResampleStream:
         -------
         float
             Current delay in output samples.
+            (Not implemented for `vr=True`. Returns constant.)
         """
         return self._csoxr.delay()
 
@@ -172,11 +178,27 @@ class ResampleStream:
         out_rate : float
             New output sample-rate.
         slew_len : int, optional
-            Length of smooth transition in input samples. (default: 0)
+            Length of smooth transition in output samples. (default: 0)
             If slew_len > 0, the transition will be done smoothly over the given length.
             If slew_len == 0, the transition will be done immediately.
+
+        Notes
+        -----
+        The ratio (in_rate / out_rate) should not exceed the one given at constructor.
+        Otherwise, output will be aliased.
+
+        libsoxr limitations:
+        `slew_len` is ignored if it's called before the first `resample_chunk()`.
+        Immediate change (slew_len == 0) while slewing does not cancel the slew.
         """
-        self._csoxr.set_io_ratio(in_rate / out_rate, slew_len)
+        if in_rate <= 0 or out_rate <= 0:
+            raise ValueError('Sample rate should be over 0')
+
+        io_ratio = in_rate / out_rate
+        self._csoxr.set_io_ratio(io_ratio, slew_len)
+
+        if self._max_io_ratio < io_ratio:
+            warnings.warn('I/O ratio exceeds the one given at constructor. Output will be aliased.')
 
 
 def resample(x: ArrayLike, in_rate: float, out_rate: float, quality='HQ') -> np.ndarray:
