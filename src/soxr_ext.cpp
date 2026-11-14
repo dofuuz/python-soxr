@@ -46,9 +46,23 @@ template <> constexpr soxr_datatype_t to_s_dtype<int32_t> = SOXR_INT32_S;
 template <> constexpr soxr_datatype_t to_s_dtype<int16_t> = SOXR_INT16_S;
 
 
+// libsoxr hangs or crashes with I/O ratio out of this range. (also rejects NaN)
+// Bundled libsoxr has the same check. This is mainly for external libsoxr.
+static double check_io_ratio(double in_rate, double out_rate) {
+    if (!(in_rate > 0 && out_rate > 0))
+        throw std::invalid_argument("Sample rate should be over 0");
+
+    const double io_ratio = in_rate / out_rate;
+    if (!(4e-6 < io_ratio && io_ratio < 1e9))
+        throw std::invalid_argument("I/O ratio out of range");
+
+    return io_ratio;
+}
+
+
 class CSoxr {
     soxr_t _soxr = nullptr;
-    double _oi_ratio;           // out_rate/in_rate
+    double _io_ratio;           // current in_rate/out_rate
     std::unique_ptr<uint8_t[]> _y_buf;
     size_t _y_buf_bytes = 0;    // _y_buf size in bytes
     size_t _olen = 0;           // _y_buf size in frames
@@ -64,7 +78,7 @@ public:
           soxr_datatype_t ntype, unsigned long quality, bool vr) :
             _in_rate(in_rate),
             _out_rate(out_rate),
-            _oi_ratio(out_rate / in_rate),
+            _io_ratio(check_io_ratio(in_rate, out_rate)),
             _ntype(ntype),
             _channels(num_channels) {
         soxr_error_t err = NULL;
@@ -150,9 +164,9 @@ public:
 
             const size_t ilen = x.shape(0);
 
-            // This is slower than returning fixed `ilen * _oi_ratio` buffers w/o copying.
+            // This is slower than returning fixed `ilen / _io_ratio` buffers w/o copying.
             // But it ensures the lowest output delay provided by libsoxr.
-            const size_t req_len = soxr_delay(_soxr) + ilen * _oi_ratio + 1;
+            const size_t req_len = soxr_delay(_soxr) + ilen / _io_ratio + 1;
             y = _resize_ybuf<T>(sizeof(T) * req_len * channels, false);
 
             size_t odone = 0;
@@ -190,12 +204,17 @@ public:
         soxr_error_t err = soxr_clear(_soxr);
         if (err != NULL) throw std::runtime_error(err);
         _ended = false;
+        _io_ratio = _in_rate / _out_rate;   // soxr_clear() resets I/O ratio
     }
 
-    void set_io_ratio(double io_ratio, size_t slew_len=0) {
+    void set_io_ratio(double in_rate, double out_rate, int64_t slew_len) {
+        const double io_ratio = check_io_ratio(in_rate, out_rate);
+        if (slew_len < 0 || INT32_MAX < slew_len)   // libsoxr handles it as int
+            throw std::invalid_argument("slew_len out of range");
+
         soxr_error_t err = soxr_set_io_ratio(_soxr, io_ratio, slew_len);
         if (err != NULL) throw std::runtime_error(err);
-        _oi_ratio = std::max(_oi_ratio, 1 / io_ratio);
+        _io_ratio = io_ratio;
     }
 };
 
@@ -207,6 +226,8 @@ auto csoxr_divide_proc(
         double in_rate, double out_rate,
         ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
         unsigned long quality) {
+    check_io_ratio(in_rate, out_rate);
+
     const unsigned channels = x.shape(1);
 
     soxr_error_t err = NULL;
@@ -274,8 +295,7 @@ auto csoxr_split_ch(
         double in_rate, double out_rate,
         ndarray<const T, nb::ndim<2>, nb::device::cpu> x,
         unsigned long quality) {
-    if (in_rate <= 0 || out_rate <= 0)
-        throw std::invalid_argument("Sample rate should be over 0");
+    check_io_ratio(in_rate, out_rate);
 
     const size_t ilen = x.shape(0);
     const size_t olen = ilen * out_rate / in_rate + 1;
@@ -359,6 +379,8 @@ auto csoxr_oneshot(
         double in_rate, double out_rate,
         ndarray<const T, nb::ndim<2>, nb::c_contig, nb::device::cpu> x,
         unsigned long quality) {
+    check_io_ratio(in_rate, out_rate);
+
     const size_t ilen = x.shape(0);
     const size_t olen = ilen * out_rate / in_rate + 1;
     unsigned channels = x.shape(1);

@@ -89,9 +89,6 @@ class ResampleStream:
     def __init__(self,
                  in_rate: float, out_rate: float, num_channels: int,
                  dtype='float32', quality='HQ', vr=False):
-        if in_rate <= 0 or out_rate <= 0:
-            raise ValueError('Sample rate should be over 0')
-
         if num_channels < 1 or _CH_LIMIT < num_channels:
             raise ValueError(_CH_EXEED_ERR_STR.format(num_channels))
 
@@ -100,8 +97,8 @@ class ResampleStream:
 
         q = _quality_to_enum(quality)
 
-        self._max_io_ratio = in_rate / out_rate
         self._csoxr = soxr_ext.CSoxr(in_rate, out_rate, num_channels, stype, q, vr)
+        self._max_io_ratio = in_rate / out_rate
         self._process = getattr(self._csoxr, f'process_{self._type}')
 
     def resample_chunk(self, x: np.ndarray, last=False) -> np.ndarray:
@@ -191,13 +188,9 @@ class ResampleStream:
         `slew_len` is ignored if it's called before the first `resample_chunk()`.
         Immediate change (slew_len == 0) while slewing does not cancel the slew.
         """
-        if in_rate <= 0 or out_rate <= 0:
-            raise ValueError('Sample rate should be over 0')
+        self._csoxr.set_io_ratio(in_rate, out_rate, slew_len)
 
-        io_ratio = in_rate / out_rate
-        self._csoxr.set_io_ratio(io_ratio, slew_len)
-
-        if self._max_io_ratio < io_ratio:
+        if self._max_io_ratio < in_rate / out_rate:
             warnings.warn('I/O ratio exceeds the one given at constructor. Output will be aliased.')
 
 
@@ -224,9 +217,6 @@ def resample(x: ArrayLike, in_rate: float, out_rate: float, quality='HQ') -> np.
         Resampled data.
         Output is `np.ndarray` with same ndim and dtype with input.
     """
-    if in_rate <= 0 or out_rate <= 0:
-        raise ValueError('Sample rate should be over 0')
-
     if type(x) != np.ndarray:
         x = np.asarray(x, dtype=np.float32)
 

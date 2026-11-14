@@ -21,10 +21,9 @@ import soxr
 def test_bad_sr(in_rate, out_rate):
     # test invalid samplerate
     x = np.zeros(100)
-    # NaN, inf are rejected by libsoxr (RuntimeError) or at output buffer allocation (MemoryError)
-    with pytest.raises((ValueError, RuntimeError, MemoryError)):
+    with pytest.raises(ValueError):
         soxr.resample(x, in_rate, out_rate)
-    with pytest.raises((ValueError, RuntimeError)):
+    with pytest.raises(ValueError):
         soxr.ResampleStream(in_rate, out_rate, 1)
 
 
@@ -269,7 +268,7 @@ def test_vr_chunk_match(chunk_size):
     (float('nan'), 1, 0), (float('inf'), 1, 0), (1, float('inf'), 0), (-1, 1, 0), (1, 0, 0),
     (1e30, 1, 0), (1, 1e30, 0), (1, 1, -1), (1, 1, 2**32)])
 def test_vr_bad_ratio(in_rate, out_rate, slew_len):
-    # these values should be rejected (mostly by libsoxr), not crash or hang
+    # these values crash or hang libsoxr. Should be rejected
     rs = soxr.ResampleStream(4, 1, 1, vr=True)
-    with pytest.raises((ValueError, RuntimeError, TypeError)):
+    with pytest.raises(ValueError):
         rs.set_io_ratio(in_rate, out_rate, slew_len)
