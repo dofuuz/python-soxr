@@ -61,6 +61,15 @@ static double check_io_ratio(double in_rate, double out_rate) {
 }
 
 
+// libsoxr buffers the whole input and output of a soxr_process() call in its FIFOs.
+// It gets much slower when they grow large (repeated FIFO realloc, cache misses).
+// Divide long input so that neither input nor output exceeds DIV_LEN frames per call.
+static size_t calc_div_len(double io_ratio) {
+    constexpr double DIV_LEN = 32768;
+    return std::max(1., DIV_LEN * std::min(1., io_ratio));
+}
+
+
 class CSoxr {
     soxr_t _soxr = nullptr;
     double _io_ratio;           // current in_rate/out_rate
@@ -187,8 +196,7 @@ public:
 };
 
 
-// soxr_oneshot() becomes much slower when input is long.
-// To avoid this, divide long input and process.
+// Divide long input and process. (see calc_div_len())
 template <typename T>
 auto csoxr_divide_proc(
         double in_rate, double out_rate,
@@ -220,7 +228,7 @@ auto csoxr_divide_proc(
         // alloc
         const size_t ilen = x.shape(0);
         const size_t olen = ilen * out_rate / in_rate + 1;
-        const size_t div_len = std::max(1000., 48000 * in_rate / out_rate);
+        const size_t div_len = calc_div_len(in_rate / out_rate);
         y = new T[olen * channels] { 0 };
 
         // divide long input and process
@@ -292,7 +300,7 @@ auto csoxr_split_ch(
         if (err) break;
 
         // alloc
-        const size_t div_len = std::max(1000., 48000 * in_rate / out_rate);
+        const size_t div_len = calc_div_len(in_rate / out_rate);
         y = new T[olen * channels] { 0 };
 
         const int64_t st = x.stride(1);
