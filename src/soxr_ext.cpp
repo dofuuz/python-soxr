@@ -61,9 +61,8 @@ static double check_io_ratio(double in_rate, double out_rate) {
 }
 
 
-// libsoxr buffers the whole input and output of a soxr_process() call in its FIFOs.
-// It gets much slower when they grow large (repeated FIFO realloc, cache misses).
-// Divide long input so that neither input nor output exceeds DIV_LEN frames per call.
+// libsoxr becomes much slower when input is long. (see GH PR #39)
+// Divide input so neither input nor output exceeds DIV_LEN frames per call.
 static size_t calc_div_len(double io_ratio) {
     constexpr double DIV_LEN = 32768;
     return std::max(1., DIV_LEN * std::min(1., io_ratio));
@@ -124,42 +123,63 @@ public:
             throw nb::type_error("Data type mismatch");
 
         const size_t frame_bytes = sizeof(T) * channels;
-        soxr_in_t in = x.data();
-        size_t ilen = x.shape(0);
+        const size_t ilen = x.shape(0);
         size_t out_pos = 0;
 
         soxr_error_t err = NULL;
         {
             nb::gil_scoped_release release;
 
-            // This is slower than returning fixed `ilen / _io_ratio` buffers w/o copying.
-            // But it ensures the lowest output delay provided by libsoxr.
-            size_t req_len = soxr_delay(_soxr) + ilen / _io_ratio + 1;
+            // Copying from a resizing buffer ensures the lowest output delay provided by libsoxr.
+            // +2: flush output is the estimate rounded, so +1 often fills the buffer and regrows it.
+            size_t req_len = soxr_delay(_soxr) + ilen / _io_ratio + 2;
 
-            while (true) {
-                if (_y_buf.size() < req_len * frame_bytes)
-                    _y_buf.resize(req_len * frame_bytes);
-                const size_t olen = _y_buf.size() / frame_bytes;
+            // divide long input and process (see calc_div_len())
+            const size_t div_len = calc_div_len(_io_ratio);
+            for (size_t idx = 0; idx < ilen && !err; idx += div_len) {
+                size_t in_len = std::min(div_len, ilen-idx);
 
-                size_t odone = 0;
-                err = soxr_process(
-                    _soxr,
-                    in, ilen, NULL,
-                    &_y_buf[out_pos * frame_bytes], olen-out_pos, &odone);
-                out_pos += odone;
-                ilen = 0;   // soxr takes whole input at once
+                // get all output, growing the output buffer as needed
+                while (true) {
+                    if (_y_buf.size() < req_len * frame_bytes)
+                        _y_buf.resize(req_len * frame_bytes);
+                    const size_t olen = _y_buf.size() / frame_bytes;
 
-                if (err) break;
+                    size_t odone = 0;
+                    err = soxr_process(
+                        _soxr,
+                        &x.data()[idx * channels], in_len, NULL,
+                        &_y_buf[out_pos * frame_bytes], olen-out_pos, &odone);
+                    out_pos += odone;
+                    in_len = 0;     // soxr takes whole input at once
 
-                if (out_pos == olen) {
+                    if (err || out_pos < olen) break;
+
                     // output buffer full, there may be more (e.g. VR mode)
                     req_len = olen * 2;
-                } else if (last && !_ended) {
-                    // output drained, signal end of input and flush
-                    _ended = true;
-                    in = NULL;
-                } else {
-                    break;
+                }
+            }
+
+            // signal end of input and flush
+            if (last && !err) {
+                _ended = true;
+
+                while (true) {
+                    if (_y_buf.size() < req_len * frame_bytes)
+                        _y_buf.resize(req_len * frame_bytes);
+                    const size_t olen = _y_buf.size() / frame_bytes;
+
+                    size_t odone = 0;
+                    err = soxr_process(
+                        _soxr,
+                        NULL, 0, NULL,
+                        &_y_buf[out_pos * frame_bytes], olen-out_pos, &odone);
+                    out_pos += odone;
+
+                    if (err || out_pos < olen) break;
+
+                    // output buffer full, there may be more
+                    req_len = olen * 2;
                 }
             }
         }
