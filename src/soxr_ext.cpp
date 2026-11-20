@@ -262,7 +262,7 @@ auto csoxr_divide_proc(
         if (err) break;
 
         // alloc
-        y = new T[olen * channels] { 0 };
+        y = new T[olen * channels];
 
         // divide long input and process
         size_t odone = 0;
@@ -341,7 +341,7 @@ auto csoxr_split_ch(
         if (err) break;
 
         // alloc
-        y = new T[olen * channels] { 0 };
+        y = new T[olen * channels];
 
         const int64_t st = x.stride(1);
         auto ibuf_ptrs = make_unique<const T*[]>(channels);
@@ -424,7 +424,7 @@ auto csoxr_oneshot(
     {
         nb::gil_scoped_release release;
 
-        y = new T[olen * channels] { 0 };
+        y = new T[olen * channels];
 
         err = soxr_oneshot(
             in_rate, out_rate, channels,
