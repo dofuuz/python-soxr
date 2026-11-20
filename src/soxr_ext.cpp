@@ -172,8 +172,6 @@ public:
 
             // signal end of input and flush
             if (last && !err) {
-                _ended = true;
-
                 while (true) {
                     grow_buf(req_len, frame_bytes);
                     const size_t olen = _y_buf.size() / frame_bytes;
@@ -190,6 +188,8 @@ public:
                     // output buffer full, there may be more
                     req_len = olen * 2.;
                 }
+
+                if (!err) _ended = true;
             }
         }
 
@@ -243,6 +243,7 @@ auto csoxr_divide_proc(
 
     soxr_error_t err = NULL;
 
+    soxr_t soxr = nullptr;
     T *y = nullptr;
     size_t out_pos = 0;
     do {
@@ -254,7 +255,7 @@ auto csoxr_divide_proc(
         const soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
         const soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, 0);
 
-        soxr_t soxr = soxr_create(
+        soxr = soxr_create(
             in_rate, out_rate, channels,
             &err, &io_spec, &quality_spec, NULL);
 
@@ -271,7 +272,10 @@ auto csoxr_divide_proc(
                 &x.data()[idx*channels], std::min(div_len, ilen-idx), NULL,
                 &y[out_pos*channels], std::min<size_t>(olen-out_pos, INT_MAX), &odone);
             out_pos += odone;
+
+            if (err) break;
         }
+        if (err) break;
 
         // flush
         err = soxr_process(
@@ -279,10 +283,10 @@ auto csoxr_divide_proc(
             NULL, 0, NULL,
             &y[out_pos*channels], std::min<size_t>(olen-out_pos, INT_MAX), &odone);
         out_pos += odone;
-
-        // destruct
-        soxr_delete(soxr);
     } while (false);
+
+    // destruct
+    soxr_delete(soxr);
 
     if (err) {
         delete[] y;
@@ -318,6 +322,7 @@ auto csoxr_split_ch(
 
     soxr_error_t err = NULL;
 
+    soxr_t soxr = nullptr;
     T *y = nullptr;
     size_t out_pos = 0;
     do {
@@ -329,7 +334,7 @@ auto csoxr_split_ch(
         const soxr_io_spec_t io_spec = soxr_io_spec(ntype, ntype);
         const soxr_quality_spec_t quality_spec = soxr_quality_spec(quality, 0);
 
-        soxr_t soxr = soxr_create(
+        soxr = soxr_create(
             in_rate, out_rate, channels,
             &err, &io_spec, &quality_spec, NULL);
 
@@ -356,7 +361,10 @@ auto csoxr_split_ch(
                 ibuf_ptrs.get(), std::min(div_len, ilen-idx), NULL,
                 obuf_ptrs.get(), std::min<size_t>(olen-out_pos, INT_MAX), &odone);
             out_pos += odone;
+
+            if (err) break;
         }
+        if (err) break;
 
         // flush
         for (size_t ch = 0; ch < channels; ++ch) {
@@ -367,10 +375,10 @@ auto csoxr_split_ch(
             NULL, 0, NULL,
             obuf_ptrs.get(), std::min<size_t>(olen-out_pos, INT_MAX), &odone);
         out_pos += odone;
-
-        // destruct
-        soxr_delete(soxr);
     } while (false);
+
+    // destruct
+    soxr_delete(soxr);
 
     if (err) {
         delete[] y;
