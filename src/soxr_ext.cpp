@@ -11,6 +11,7 @@ Python-SoXR is a Python wrapper of libsoxr.
 
 #include <stdint.h>
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <memory>
 #include <vector>
@@ -74,6 +75,16 @@ class CSoxr {
     double _io_ratio;           // current in_rate/out_rate
     std::vector<uint8_t> _y_buf;    // output buffer, reused across process() calls
 
+    // grow output buffer to hold req_len frames
+    void grow_buf(double req_len, size_t frame_bytes) {
+        if (SIZE_MAX <= req_len * frame_bytes)  // size_t overflow
+            throw std::bad_alloc();
+
+        const size_t req_bytes = (size_t)req_len * frame_bytes;
+        if (_y_buf.size() < req_bytes)
+            _y_buf.resize(req_bytes);
+    }
+
 public:
     const double _in_rate;
     const double _out_rate;
@@ -132,7 +143,7 @@ public:
 
             // Copying from a resizing buffer ensures the lowest output delay provided by libsoxr.
             // +2: flush output is the estimate rounded, so +1 often fills the buffer and regrows it.
-            size_t req_len = soxr_delay(_soxr) + ilen / _io_ratio + 2;
+            double req_len = soxr_delay(_soxr) + ilen / _io_ratio + 2;
 
             // divide long input and process (see calc_div_len())
             const size_t div_len = calc_div_len(_io_ratio);
@@ -141,22 +152,21 @@ public:
 
                 // get all output, growing the output buffer as needed
                 while (true) {
-                    if (_y_buf.size() < req_len * frame_bytes)
-                        _y_buf.resize(req_len * frame_bytes);
+                    grow_buf(req_len, frame_bytes);
                     const size_t olen = _y_buf.size() / frame_bytes;
 
                     size_t odone = 0;
                     err = soxr_process(
                         _soxr,
                         &x.data()[idx * channels], in_len, NULL,
-                        &_y_buf[out_pos * frame_bytes], olen-out_pos, &odone);
+                        &_y_buf[out_pos * frame_bytes], std::min<size_t>(olen-out_pos, INT_MAX), &odone);
                     out_pos += odone;
                     in_len = 0;     // soxr takes whole input at once
 
                     if (err || out_pos < olen) break;
 
                     // output buffer full, there may be more (e.g. VR mode)
-                    req_len = olen * 2;
+                    req_len = olen * 2.;
                 }
             }
 
@@ -165,21 +175,20 @@ public:
                 _ended = true;
 
                 while (true) {
-                    if (_y_buf.size() < req_len * frame_bytes)
-                        _y_buf.resize(req_len * frame_bytes);
+                    grow_buf(req_len, frame_bytes);
                     const size_t olen = _y_buf.size() / frame_bytes;
 
                     size_t odone = 0;
                     err = soxr_process(
                         _soxr,
                         NULL, 0, NULL,
-                        &_y_buf[out_pos * frame_bytes], olen-out_pos, &odone);
+                        &_y_buf[out_pos * frame_bytes], std::min<size_t>(olen-out_pos, INT_MAX), &odone);
                     out_pos += odone;
 
                     if (err || out_pos < olen) break;
 
                     // output buffer full, there may be more
-                    req_len = olen * 2;
+                    req_len = olen * 2.;
                 }
             }
         }
@@ -206,7 +215,7 @@ public:
 
     void set_io_ratio(double in_rate, double out_rate, int64_t slew_len) {
         const double io_ratio = check_io_ratio(in_rate, out_rate);
-        if (slew_len < 0 || INT32_MAX < slew_len)   // libsoxr handles it as int
+        if (slew_len < 0 || INT_MAX < slew_len)   // libsoxr handles it as int
             throw std::invalid_argument("slew_len out of range");
 
         soxr_error_t err = soxr_set_io_ratio(_soxr, io_ratio, slew_len);
@@ -225,6 +234,12 @@ auto csoxr_divide_proc(
     check_io_ratio(in_rate, out_rate);
 
     const unsigned channels = x.shape(1);
+    const size_t ilen = x.shape(0);
+    const double olen_f = ilen * out_rate / in_rate + 1;
+    if (SIZE_MAX <= olen_f * channels * sizeof(T))  // size_t overflow
+        throw std::bad_alloc();
+    const size_t olen = olen_f;
+    const size_t div_len = calc_div_len(in_rate / out_rate);
 
     soxr_error_t err = NULL;
 
@@ -246,9 +261,6 @@ auto csoxr_divide_proc(
         if (err) break;
 
         // alloc
-        const size_t ilen = x.shape(0);
-        const size_t olen = ilen * out_rate / in_rate + 1;
-        const size_t div_len = calc_div_len(in_rate / out_rate);
         y = new T[olen * channels] { 0 };
 
         // divide long input and process
@@ -257,7 +269,7 @@ auto csoxr_divide_proc(
             err = soxr_process(
                 soxr,
                 &x.data()[idx*channels], std::min(div_len, ilen-idx), NULL,
-                &y[out_pos*channels], olen-out_pos, &odone);
+                &y[out_pos*channels], std::min<size_t>(olen-out_pos, INT_MAX), &odone);
             out_pos += odone;
         }
 
@@ -265,7 +277,7 @@ auto csoxr_divide_proc(
         err = soxr_process(
             soxr,
             NULL, 0, NULL,
-            &y[out_pos*channels], olen-out_pos, &odone);
+            &y[out_pos*channels], std::min<size_t>(olen-out_pos, INT_MAX), &odone);
         out_pos += odone;
 
         // destruct
@@ -293,9 +305,13 @@ auto csoxr_split_ch(
         unsigned long quality) {
     check_io_ratio(in_rate, out_rate);
 
-    const size_t ilen = x.shape(0);
-    const size_t olen = ilen * out_rate / in_rate + 1;
     const unsigned channels = x.shape(1);
+    const size_t ilen = x.shape(0);
+    const double olen_f = ilen * out_rate / in_rate + 1;
+    if (SIZE_MAX <= olen_f * channels * sizeof(T))  // size_t overflow
+        throw std::bad_alloc();
+    const size_t olen = olen_f;
+    const size_t div_len = calc_div_len(in_rate / out_rate);
 
     if (ilen != 0 && x.stride(0) != 1)
         throw std::invalid_argument("Data not contiguous");
@@ -320,7 +336,6 @@ auto csoxr_split_ch(
         if (err) break;
 
         // alloc
-        const size_t div_len = calc_div_len(in_rate / out_rate);
         y = new T[olen * channels] { 0 };
 
         const int64_t st = x.stride(1);
@@ -339,7 +354,7 @@ auto csoxr_split_ch(
             err = soxr_process(
                 soxr,
                 ibuf_ptrs.get(), std::min(div_len, ilen-idx), NULL,
-                obuf_ptrs.get(), olen-out_pos, &odone);
+                obuf_ptrs.get(), std::min<size_t>(olen-out_pos, INT_MAX), &odone);
             out_pos += odone;
         }
 
@@ -350,7 +365,7 @@ auto csoxr_split_ch(
         err = soxr_process(
             soxr,
             NULL, 0, NULL,
-            obuf_ptrs.get(), olen-out_pos, &odone);
+            obuf_ptrs.get(), std::min<size_t>(olen-out_pos, INT_MAX), &odone);
         out_pos += odone;
 
         // destruct
@@ -370,6 +385,7 @@ auto csoxr_split_ch(
 }
 
 
+// soxr_oneshot() becomes slow with long input. This function exists for test purpose.
 template <typename T>
 auto csoxr_oneshot(
         double in_rate, double out_rate,
@@ -377,9 +393,16 @@ auto csoxr_oneshot(
         unsigned long quality) {
     check_io_ratio(in_rate, out_rate);
 
+    const unsigned channels = x.shape(1);
     const size_t ilen = x.shape(0);
-    const size_t olen = ilen * out_rate / in_rate + 1;
-    unsigned channels = x.shape(1);
+    const double olen_f = ilen * out_rate / in_rate + 1;
+    if (SIZE_MAX <= olen_f * channels * sizeof(T))  // size_t overflow
+        throw std::bad_alloc();
+    const size_t olen = olen_f;
+
+    // soxr_oneshot() processes in one call, can't clamp olen
+    if (INT_MAX < olen)
+        throw std::length_error("Output too long. Use shorter input.");
 
     constexpr soxr_datatype_t ntype = to_i_dtype<T>;
 
