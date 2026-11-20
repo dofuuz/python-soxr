@@ -121,7 +121,7 @@ class ResampleStream:
             Output is np.ndarray with same ndim with input.
 
         """
-        if type(x) != np.ndarray or x.dtype != self._type:
+        if not isinstance(x, np.ndarray) or x.dtype != self._type:
             raise TypeError(_DTYPE_UNMATCH_ERR_STR.format(self._type))
 
         if x.ndim == 1:
@@ -217,7 +217,7 @@ def resample(x: ArrayLike, in_rate: float, out_rate: float, quality='HQ') -> np.
         Resampled data.
         Output is `np.ndarray` with same ndim and dtype with input.
     """
-    if type(x) != np.ndarray:
+    if not isinstance(x, np.ndarray):
         x = np.asarray(x, dtype=np.float32)
 
     try:
